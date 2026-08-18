@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Layout from '../../components/Layout';
 import Dropdown from '../../components/Dropdown';
 import { getSessionFromReq } from '../../lib/auth';
+import { calculateVideoSizeSummary } from '../../lib/videoSizeComparison';
 
 export async function getServerSideProps({ req }) {
   const session = getSessionFromReq(req);
@@ -28,6 +29,13 @@ function formatDuration(seconds) {
   const m = Math.floor(n / 60);
   const s = Math.floor(n % 60);
   return `${m}:${String(s).padStart(2, '0')}`;
+}
+
+function formatSignedSize(bytes) {
+  if (bytes === null || bytes === undefined) return 'Not available';
+  const n = Number(bytes);
+  if (!Number.isFinite(n)) return 'Not available';
+  return `${n > 0 ? '+' : ''}${formatSize(Math.abs(n))}`;
 }
 
 export default function Dashboard({ session }) {
@@ -217,6 +225,14 @@ export default function Dashboard({ session }) {
   const selectionUsesOneAccount = selectedFiles.every((file) => file.sourceAccountId === selectedAccountId);
   const allVisibleSelected =
     pagedFiles.length > 0 && pagedFiles.every((file) => selected.has(file.row_id));
+  const measuredFileSizes = useMemo(() => {
+    const summary = calculateVideoSizeSummary(files);
+    return { total: summary.totalBytes, count: summary.measuredCount };
+  }, [files]);
+  const providerStorageUsed = earnings?.storageUsed ?? null;
+  const storageDifference = measuredFileSizes.total !== null && providerStorageUsed !== null
+    ? measuredFileSizes.total - Number(providerStorageUsed)
+    : null;
 
   function toggleSelectAllVisible() {
     setSelected((prev) => {
@@ -477,9 +493,16 @@ export default function Dashboard({ session }) {
     <Layout title="Videos" session={session}>
       <div className="stat-grid">
         <div className="stat-card">
-          <div className="stat-card-label">Storage Capacity</div>
-          <div className="stat-card-value">{formatSize(totalSize)}</div>
-          <div className="stat-card-sub">across {files.length} video{files.length === 1 ? '' : 's'}</div>
+          <div className="stat-card-label">Calculated Video Size</div>
+          <div className="stat-card-value">{formatSize(measuredFileSizes.total ?? totalSize)}</div>
+          <div className="stat-card-sub">sum of {measuredFileSizes.count} measured file{measuredFileSizes.count === 1 ? '' : 's'}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-card-label">Vidmoly Storage Comparison</div>
+          <div className="stat-card-value stat-card-accent">{formatSignedSize(storageDifference)}</div>
+          <div className="stat-card-sub">
+            Files: {formatSize(measuredFileSizes.total ?? totalSize)} · Vidmoly: {formatSize(providerStorageUsed)}
+          </div>
         </div>
         <div className="stat-card">
           <div className="stat-card-label">Total Videos</div>
