@@ -1,0 +1,28 @@
+{
+  "name": "mix-gold-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "NODE_ENV=development next dev",
+    "build": "NODE_ENV=production next build && node scripts/prepare-deploy-assets.mjs",
+    "start": "NODE_ENV=production next start",
+    "check": "echo \"Next.js validation is covered by npm run build\"",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "bcryptjs": "^2.4.3",
+    "cookie": "^0.6.0",
+    "formidable": "^2.1.2",
+    "jsonwebtoken": "^9.0.2",
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "typescript": "7.0.2",
+    "vitest": "^2.1.9"
+  }
+}
