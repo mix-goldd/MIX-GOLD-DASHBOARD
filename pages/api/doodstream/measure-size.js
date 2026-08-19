@@ -18,7 +18,16 @@ function auth(req, res) {
 
 async function readMeasurements() {
   const value = await getDashboardSetting(MEASUREMENT_KEY);
-  return value && typeof value === 'object' ? value : {};
+  if (value && typeof value === 'object') return value;
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+      return {};
+    }
+  }
+  return {};
 }
 
 export default async function handler(req, res) {

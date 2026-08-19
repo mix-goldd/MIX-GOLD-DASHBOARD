@@ -130,6 +130,12 @@ export default function Dashboard({ session }) {
     async function measureMissingSizes() {
       for (const file of missing) {
         if (cancelled || !file.file_code || !file.sourceAccountId) continue;
+        const measurementKey = `vidmoly-size-attempted:${file.file_code}`;
+        if (typeof window !== 'undefined' && window.localStorage.getItem(measurementKey)) {
+          setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'unavailable' }));
+          continue;
+        }
+        if (typeof window !== 'undefined') window.localStorage.setItem(measurementKey, new Date().toISOString());
         setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'measuring' }));
         try {
           const res = await fetch('/api/doodstream/measure-size', {
