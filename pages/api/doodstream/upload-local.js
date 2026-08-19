@@ -2,6 +2,7 @@ const fs = require('fs');
 const formidable = require('formidable');
 const { requireAuth } = require('../../../lib/api-auth');
 const vidmoly = require('../../../lib/vidmoly');
+const { getNextApiKey, recordApiOutcome } = require('../../../lib/apiKeyManager');
 const { cacheFileSize } = require('../../../lib/db');
 const { cacheKnownUploadSize } = require('../../../lib/uploadSizeCache');
 const { invalidateVidmolySnapshot } = require('../../../lib/vidmolyDashboardCache');
@@ -46,15 +47,18 @@ export default async function handler(req, res) {
     const fldIdRaw = Array.isArray(fields.fld_id) ? fields.fld_id[0] : fields.fld_id;
     const fldId = fldIdRaw ? String(fldIdRaw) : '';
 
-    // Step 1: ask Vidmoly which upload server to use.
-    const serverRes = await vidmoly.getUploadServer();
+    // Step 1: reserve one eligible account and ask Vidmoly for its upload server.
+    // The same account is used for the multipart upload, so a rotated key is
+    // never followed by a hard-coded primary key.
+    const uploadCredential = await getNextApiKey('vidmoly');
+    const serverRes = await vidmoly.getUploadServerForAccount(uploadCredential.id);
     if (serverRes.status !== 200 || !serverRes.result) {
       return res.status(502).json({ error: 'Vidmoly did not return an upload server.' });
     }
 
     // Step 2: forward the file to that server ourselves, so the
     // API key is attached here on the backend, never in the browser.
-    const apiKey = process.env.VIDMOLY_API_KEY;
+    const apiKey = uploadCredential.value;
     const uploadForm = new FormData();
     uploadForm.append('api_key', apiKey);
     if (fldId) uploadForm.append('fld_id', fldId);
@@ -66,6 +70,12 @@ export default async function handler(req, res) {
       body: uploadForm,
     });
     const uploadData = await uploadRes.json();
+    await recordApiOutcome({
+      provider: 'vidmoly',
+      keyId: uploadCredential.id,
+      httpStatus: uploadRes.status,
+      providerPayload: uploadData,
+    });
 
     // Fallback: some upload servers ignore fld_id on the multipart
     // upload itself, so explicitly move the file afterward too.
@@ -74,7 +84,7 @@ export default async function handler(req, res) {
       const fileCode = uploadedItem?.filecode || uploadedItem?.file_code;
       if (fileCode && fldId) {
         try {
-          await vidmoly.moveFile(fileCode, fldId);
+          await vidmoly.moveFileForAccount(uploadCredential.id, fileCode, fldId);
         } catch (moveErr) {
           // Upload already succeeded — surface a warning but don't fail the request.
           uploadData.folder_move_warning = 'Uploaded, but moving it to the selected folder failed.';
