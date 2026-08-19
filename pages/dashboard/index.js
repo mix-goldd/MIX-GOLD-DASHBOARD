@@ -906,7 +906,9 @@ export default function Dashboard({ session }) {
                         ? formatSize(file.size)
                         : sizeMeasurementStatus[file.file_code] === 'measuring'
                           ? 'Measuring…'
-                          : '—'}
+                          : sizeMeasurementStatus[file.file_code] === 'unavailable'
+                            ? 'غير متاح من Vidmoly'
+                            : '—'}
                     </td>
                     <td>{file.uploaded}</td>
                     <td>
