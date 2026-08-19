@@ -2921,3 +2921,19 @@ tr:last-child td {
 .settings-type-remove:hover {
   color: var(--danger);
 }
+
+/* YouTube Studio-inspired treatment for the primary statistics chart only. */
+.am-chart-studio {
+  background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), rgba(255,255,255,.16) calc(25% - 1px), rgba(255,255,255,.16) 25%);
+  border-bottom-color: rgba(255,255,255,.28);
+}
+.am-chart-studio .am-chart-strip { align-items: flex-end; padding: 0 2px; }
+.am-chart-studio .am-bar { min-width: 3px; background: #19bfe8; border-radius: 2px 2px 0 0; box-shadow: 0 0 6px rgba(25,191,232,.16); opacity: .92; transition: opacity 160ms ease, filter 160ms ease, outline-color 160ms ease; }
+.am-chart-studio .am-bar-active { background: #f6f7f8; box-shadow: 0 0 0 2px rgba(246,247,248,.28), 0 0 10px rgba(25,191,232,.42); filter: brightness(1.08); outline: 2px solid #f6f7f8; outline-offset: 2px; }
+.am-chart-studio .am-chart-tap-readout { right: 12px; left: auto; top: 10px; min-width: 116px; padding: 8px 12px; border: 1px solid rgba(255,255,255,.22); border-radius: 7px; background: rgba(42,42,42,.96); color: #fff; text-align: right; box-shadow: 0 4px 14px rgba(0,0,0,.28); }
+@media (max-width: 720px) {
+  .am-chart-studio { height: 208px; padding: 10px 0 8px; margin: 10px 0 8px; background: repeating-linear-gradient(to bottom, transparent 0, transparent calc(25% - 1px), rgba(255,255,255,.17) calc(25% - 1px), rgba(255,255,255,.17) 25%); }
+  .am-chart-studio .am-chart-strip { height: 100%; gap: 3px; padding: 0 4px; }
+  .am-chart-studio .am-bar { min-width: 4px; }
+  .am-chart-studio .am-chart-tap-readout { top: 12px; right: 12px; }
+}

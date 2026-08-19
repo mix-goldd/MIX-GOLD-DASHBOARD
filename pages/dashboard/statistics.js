@@ -362,7 +362,7 @@ function LiveSlidingChart({ heights, counts, rangeMs }) {
   }
 
   return (
-    <div className="am-chart-live">
+    <div className="am-chart-live am-chart-studio">
       <div className={`am-chart-tap-readout ${activeBar ? 'am-chart-tap-readout-visible' : ''}`}>
         {activeBar ? (activeBar.count === 1 ? 'زيارة واحدة' : `${activeBar.count} زيارة`) : ''}
       </div>
