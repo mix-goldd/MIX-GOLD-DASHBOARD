@@ -324,6 +324,22 @@ function chartCycleSeconds(rangeMs) {
   return rangeMs / 1000;
 }
 
+function chartPointLabel(ts) {
+  const date = new Date(ts);
+  const day = date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' });
+  const time = date.toLocaleTimeString('ar-EG', { hour: 'numeric', minute: '2-digit' });
+  return `${day}، ${time}`;
+}
+
+function chartBucketLabel(index, total, rangeMs) {
+  if (!rangeMs) return 'الفترة المحددة';
+  const nowTs = Date.now();
+  const bucketMs = rangeMs / Math.max(total, 1);
+  const startTs = nowTs - rangeMs + (index * bucketMs);
+  const endTs = startTs + bucketMs;
+  return `${chartPointLabel(startTs)} – ${chartPointLabel(endTs)}`;
+}
+
 function LiveSlidingChart({ heights, counts, rangeMs }) {
   const cycleSeconds = chartCycleSeconds(rangeMs);
   // Ranges with more bars (60m's 60, vs the old fixed 30) need a
@@ -339,7 +355,7 @@ function LiveSlidingChart({ heights, counts, rangeMs }) {
   // floating tooltip, tapping just lights up that bar and posts the
   // count in a fixed readout above the chart. Clears on its own after a
   // few seconds, or immediately if you tap the same bar again.
-  const [activeBar, setActiveBar] = useState(null); // { index, count } | null
+  const [activeBar, setActiveBar] = useState(null); // { index, count, label } | null
   useEffect(() => {
     if (activeBar === null) return undefined;
     const t = setTimeout(() => setActiveBar(null), 4000);
@@ -347,7 +363,11 @@ function LiveSlidingChart({ heights, counts, rangeMs }) {
   }, [activeBar]);
 
   function handleBarTap(i) {
-    setActiveBar((prev) => (prev && prev.index === i ? null : { index: i, count: counts[i] }));
+    setActiveBar((prev) => (
+      prev && prev.index === i
+        ? null
+        : { index: i, count: counts[i], label: chartBucketLabel(i, counts.length, rangeMs) }
+    ));
   }
 
   function renderBars(prefix) {
@@ -363,8 +383,17 @@ function LiveSlidingChart({ heights, counts, rangeMs }) {
 
   return (
     <div className="am-chart-live am-chart-studio">
-      <div className={`am-chart-tap-readout ${activeBar ? 'am-chart-tap-readout-visible' : ''}`}>
-        {activeBar ? (activeBar.count === 1 ? 'زيارة واحدة' : `${activeBar.count} زيارة`) : ''}
+      <div
+        className={`am-chart-tap-readout ${activeBar ? 'am-chart-tap-readout-visible' : ''}`}
+        role="status"
+        aria-live="polite"
+      >
+        {activeBar ? (
+          <>
+            <strong>{activeBar.count === 1 ? 'زيارة واحدة' : `${activeBar.count} زيارات`}</strong>
+            <span>{activeBar.label}</span>
+          </>
+        ) : ''}
       </div>
       {cycleSeconds ? (
         <div className="am-chart-strip" style={stripStyle}>
