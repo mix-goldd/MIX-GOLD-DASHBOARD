@@ -19,4 +19,7 @@ test('watch page keeps download action and public preview metadata', () => {
   assert.match(source, /تحميل/);
   assert.match(source, /og:image/);
   assert.match(source, /og:title/);
+  assert.match(source, /findVidmolyLibraryMatch/);
+  assert.match(source, /vidmolyThumbnail \|\| post\.thumbnail_url/);
+  assert.match(source, /shareDescription = \[description, canonicalUrl \|\| siteWatchUrl\]/);
 });

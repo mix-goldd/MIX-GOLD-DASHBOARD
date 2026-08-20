@@ -2,6 +2,8 @@ import Head from 'next/head';
 import { listPosts } from '../../lib/siteDb';
 import { slugFromKey } from '../../lib/slug';
 import { formatDuration } from '../../lib/animeContent';
+import { getDashboardSetting } from '../../lib/db';
+import { findVidmolyLibraryMatch } from '../../lib/vidmolyLibraryMatch';
 
 // Prefer the public site URL, then Vercel's production host, then the
 // current request host. This keeps Facebook share links absolute in production.
@@ -22,9 +24,15 @@ export async function getServerSideProps({ params, req }) {
   const { slug } = params;
 
   let post = null;
+  let vidmolyThumbnail = '';
   try {
     const posts = await listPosts();
     post = posts.find((p) => slugFromKey(p.thumbnail_url) === slug) || null;
+    if (post?.type === 'video') {
+      const storedSnapshot = await getDashboardSetting('vidmoly_library_snapshot_v1');
+      const match = findVidmolyLibraryMatch(post.title, storedSnapshot?.payload || null);
+      vidmolyThumbnail = match?.thumbnail_url || '';
+    }
   } catch (err) {
     console.error('تعذر جلب المنشور لصفحة المشاركة:', err.message);
   }
@@ -33,18 +41,19 @@ export async function getServerSideProps({ params, req }) {
     return { notFound: true };
   }
 
-  return { props: { post, siteUrl: getRequestSiteUrl(req) } };
+  return { props: { post, siteUrl: getRequestSiteUrl(req), vidmolyThumbnail } };
 }
 
-export default function WatchPage({ post, siteUrl }) {
+export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
   const title = post.title || '';
   const description = post.description || post.synopsis || '';
-  const image = post.thumbnail_url || '';
+  const image = vidmolyThumbnail || post.thumbnail_url || '';
   const slug = slugFromKey(post.thumbnail_url);
 
   const siteWatchUrl = siteUrl ? `${siteUrl}/?post=${slug}` : `/?post=${slug}`;
   const siteDownloadUrl = siteUrl ? `${siteUrl}/?dl=${slug}` : `/?dl=${slug}`;
   const canonicalUrl = siteUrl ? `${siteUrl}/watch/${slug}` : null;
+  const shareDescription = [description, canonicalUrl || siteWatchUrl].filter(Boolean).join('\n\n');
   // Facebook builds the post preview from this public page's OG image/title.
   // Keep the actual publishing step in Facebook; this link only opens its composer.
   const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl || siteWatchUrl)}`;
@@ -57,13 +66,13 @@ export default function WatchPage({ post, siteUrl }) {
 
         <meta property="og:type" content="video.other" />
         <meta property="og:title" content={title} />
-        {description ? <meta property="og:description" content={description} /> : null}
+        {shareDescription ? <meta property="og:description" content={shareDescription} /> : null}
         {image ? <meta property="og:image" content={image} /> : null}
         {canonicalUrl ? <meta property="og:url" content={canonicalUrl} /> : null}
 
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={title} />
-        {description ? <meta name="twitter:description" content={description} /> : null}
+        {shareDescription ? <meta name="twitter:description" content={shareDescription} /> : null}
         {image ? <meta name="twitter:image" content={image} /> : null}
 
         {canonicalUrl ? <link rel="canonical" href={canonicalUrl} /> : null}
