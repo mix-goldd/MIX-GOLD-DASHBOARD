@@ -52,7 +52,7 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
 
   const siteWatchUrl = siteUrl ? `${siteUrl}/?post=${slug}` : `/?post=${slug}`;
   const siteDownloadUrl = siteUrl ? `${siteUrl}/?dl=${slug}` : `/?dl=${slug}`;
-  const canonicalUrl = siteUrl ? `${siteUrl}/watch/${slug}` : null;
+  const canonicalUrl = siteUrl ? `${siteUrl}/post/${slug}` : `/post/${slug}`;
   const shareDescription = [description, canonicalUrl || siteWatchUrl].filter(Boolean).join('\n\n');
   // Facebook builds the post preview from this public page's OG image/title.
   // Keep the actual publishing step in Facebook; this link only opens its composer.

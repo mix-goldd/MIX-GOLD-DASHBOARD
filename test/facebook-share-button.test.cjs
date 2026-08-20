@@ -13,6 +13,7 @@ test('watch page opens Facebook share composer instead of site watch link', () =
   assert.match(source, /rel="noopener noreferrer"/);
   assert.doesNotMatch(source, /مشاهدة على الموقع/);
   assert.doesNotMatch(source, /facebookShareUrl \?/);
+  assert.match(source, /`\$\{siteUrl\}\/post\/\$\{slug\}`/);
 });
 
 test('watch page keeps download action and public preview metadata', () => {
