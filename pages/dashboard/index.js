@@ -627,6 +627,7 @@ export default function Dashboard({ session }) {
       <div className="card">
         <h2>Earnings</h2>
         {earnings ? (
+          <>
           <table>
             <tbody>
               <tr>
@@ -638,11 +639,20 @@ export default function Dashboard({ session }) {
                 <td className="mono">${earnings.yesterday}</td>
               </tr>
               <tr>
+                <td>Total earnings</td>
+                <td className="mono balance-value">${earnings.total ?? earnings.balance}</td>
+              </tr>
+              <tr>
                 <td>Balance</td>
-                <td className="mono balance-value">${earnings.balance}</td>
+                <td className="mono">${earnings.balance}</td>
               </tr>
             </tbody>
           </table>
+          <p className="helper-text">Total combines Vidmoly balance with Adsterra current-month revenue.</p>
+          {earnings?.earningsSources?.adsterra?.error && (
+            <p className="helper-text">Adsterra is unavailable; the total currently includes Vidmoly only.</p>
+          )}
+          </>
         ) : (
           <p className="helper-text">Loading…</p>
         )}

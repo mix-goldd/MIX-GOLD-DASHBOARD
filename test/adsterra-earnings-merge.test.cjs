@@ -1,0 +1,19 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+test('earnings endpoint merges Adsterra with Vidmoly in one total', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../pages/api/doodstream/earnings.js'), 'utf8');
+  assert.match(source, /adsterra\.getCurrentMonthEarnings/);
+  assert.match(source, /total:\s*\(vidmolyBalance \+ adsterra\.total\)/);
+  assert.match(source, /today:\s*\(vidmolyToday \+ adsterra\.today\)/);
+  assert.match(source, /earningsSources/);
+});
+
+test('Adsterra client keeps the API key server-side', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../lib/adsterra.js'), 'utf8');
+  assert.match(source, /process\.env\.ADSTERRA_API_KEY/);
+  assert.doesNotMatch(source, /7e00e992212f36894d210623d9902af7/);
+  assert.match(source, /X-API-Key/);
+});

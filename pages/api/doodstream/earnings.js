@@ -1,5 +1,6 @@
 const { requireAuth } = require('../../../lib/api-auth');
 const vidmoly = require('../../../lib/vidmoly');
+const adsterra = require('../../../lib/adsterra');
 const { getOrRefreshVidmolySnapshot } = require('../../../lib/vidmolyDashboardCache');
 
 function todayStr() {
@@ -12,9 +13,10 @@ function yesterdayStr() {
 }
 
 async function loadEarningsFromProvider() {
-  const [accountRes, statsRes] = await Promise.all([
+  const [accountRes, statsRes, adsterraResult] = await Promise.all([
     vidmoly.accountInfo(),
     vidmoly.accountStats({ last: 2 }),
+    adsterra.getCurrentMonthEarnings().catch((error) => ({ error: error.message })),
   ]);
 
   const balance = accountRes.result?.balance ?? '0';
@@ -40,12 +42,22 @@ async function loadEarningsFromProvider() {
     // index.js) rendered as "539.62 KB", a factor of 1024 too small.
   const storageUsed = storageUsedRaw === null ? null : Number(storageUsedRaw) * 1024;
 
+  const vidmolyBalance = Number.parseFloat(balance) || 0;
+  const vidmolyToday = Number.parseFloat(today?.profit_total ?? 0) || 0;
+  const vidmolyYesterday = Number.parseFloat(yesterday?.profit_total ?? 0) || 0;
+  const adsterra = adsterraResult.error ? { total: 0, today: 0, yesterday: 0, error: adsterraResult.error } : adsterraResult;
+
   return {
     status: 200,
     result: {
       balance,
-      today: today?.profit_total ?? '0.00000',
-      yesterday: yesterday?.profit_total ?? '0.00000',
+      today: (vidmolyToday + adsterra.today).toFixed(5),
+      yesterday: (vidmolyYesterday + adsterra.yesterday).toFixed(5),
+      total: (vidmolyBalance + adsterra.total).toFixed(5),
+      earningsSources: {
+        vidmoly: { balance: vidmolyBalance, today: vidmolyToday, yesterday: vidmolyYesterday },
+        adsterra: { total: adsterra.total, today: adsterra.today, yesterday: adsterra.yesterday, error: adsterra.error || null, periodStart: adsterra.periodStart || null, periodEnd: adsterra.periodEnd || null },
+      },
       storageUsed,
       // Only sent when none of the guesses above matched — same
       // screenshot-and-fix pattern as the library's debugSample.
