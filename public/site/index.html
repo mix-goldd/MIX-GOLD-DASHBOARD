@@ -8527,9 +8527,14 @@ function toggleSave(url, cardElement) {
             else navigateTo('home');
         }
 
+        function postSlugFromPath() {
+            const match = location.pathname.match(/^\/post\/([^/]+)\/?$/);
+            return match ? decodeURIComponent(match[1]) : '';
+        }
+
         window.addEventListener('popstate', function () {
             const params = new URLSearchParams(location.search);
-            const postSlug = params.get('post');
+            const postSlug = params.get('post') || postSlugFromPath();
             const dlSlug = params.get('dl');
             const imgId = params.get('img');
             const mangaId = params.get('manga');
@@ -9208,7 +9213,7 @@ function toggleSave(url, cardElement) {
 
 navigateTo('home');
             const initialParams = new URLSearchParams(location.search);
-            const initialPost = initialParams.get('post');
+            const initialPost = initialParams.get('post') || postSlugFromPath();
             const initialDl = initialParams.get('dl');
             const initialImg = initialParams.get('img');
             const initialManga = initialParams.get('manga');
