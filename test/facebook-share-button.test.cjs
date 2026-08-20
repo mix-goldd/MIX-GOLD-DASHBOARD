@@ -1,0 +1,19 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+
+const source = fs.readFileSync('pages/watch/[slug].js', 'utf8');
+
+test('watch page opens Facebook share composer instead of site watch link', () => {
+  assert.match(source, /https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/);
+  assert.match(source, /مشاركة المنشور/);
+  assert.match(source, /target="_blank"/);
+  assert.match(source, /rel="noopener noreferrer"/);
+  assert.doesNotMatch(source, /مشاهدة على الموقع/);
+});
+
+test('watch page keeps download action and public preview metadata', () => {
+  assert.match(source, /تحميل/);
+  assert.match(source, /og:image/);
+  assert.match(source, /og:title/);
+});

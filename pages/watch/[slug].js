@@ -39,6 +39,11 @@ export default function WatchPage({ post }) {
   const siteWatchUrl = SITE_URL ? `${SITE_URL}/?post=${slug}` : `/?post=${slug}`;
   const siteDownloadUrl = SITE_URL ? `${SITE_URL}/?dl=${slug}` : `/?dl=${slug}`;
   const canonicalUrl = SITE_URL ? `${SITE_URL}/watch/${slug}` : null;
+  // Facebook builds the post preview from this public page's OG image/title.
+  // Keep the actual publishing step in Facebook; this link only opens its composer.
+  const facebookShareUrl = SITE_URL
+    ? `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl || siteWatchUrl)}`
+    : null;
 
   return (
     <>
@@ -70,9 +75,17 @@ export default function WatchPage({ post }) {
         </div>
         {description ? <p style={styles.description}>{description}</p> : null}
         <div style={styles.actions}>
-          <a href={siteWatchUrl} style={styles.primaryBtn}>
-            مشاهدة على الموقع
-          </a>
+          {facebookShareUrl ? (
+            <a
+              href={facebookShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.primaryBtn}
+              aria-label="مشاركة المنشور على Facebook"
+            >
+              مشاركة المنشور
+            </a>
+          ) : null}
           {post.download_url ? (
             <a href={siteDownloadUrl} style={styles.secondaryBtn}>
               تحميل
