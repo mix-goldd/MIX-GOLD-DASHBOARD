@@ -6,14 +6,10 @@ import { getDashboardSetting } from '../../lib/db';
 import { findVidmolyLibraryMatch } from '../../lib/vidmolyLibraryMatch';
 
 const CONFIGURED_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
-const VERCEL_SITE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+const CANONICAL_SITE_URL = 'https://mix-goldd.vercel.app';
 
-function getRequestSiteUrl(req) {
-  if (CONFIGURED_SITE_URL) return CONFIGURED_SITE_URL;
-  if (VERCEL_SITE_URL) return VERCEL_SITE_URL;
-  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
-  const protocol = req?.headers?.['x-forwarded-proto'] || 'https';
-  return host ? `${protocol}://${host}`.replace(/\/+$/, '') : '';
+function getRequestSiteUrl() {
+  return CONFIGURED_SITE_URL || CANONICAL_SITE_URL;
 }
 
 export async function getServerSideProps({ params, req }) {

@@ -5,17 +5,12 @@ import { formatDuration } from '../../lib/animeContent';
 import { getDashboardSetting } from '../../lib/db';
 import { findVidmolyLibraryMatch } from '../../lib/vidmolyLibraryMatch';
 
-// Prefer the public site URL, then Vercel's production host, then the
-// current request host. This keeps Facebook share links absolute in production.
+// Use the configured public domain, never Vercel's temporary deployment host.
 const CONFIGURED_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
-const VERCEL_SITE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+const CANONICAL_SITE_URL = 'https://mix-goldd.vercel.app';
 
-function getRequestSiteUrl(req) {
-  if (CONFIGURED_SITE_URL) return CONFIGURED_SITE_URL;
-  if (VERCEL_SITE_URL) return VERCEL_SITE_URL;
-  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
-  const protocol = req?.headers?.['x-forwarded-proto'] || 'https';
-  return host ? `${protocol}://${host}`.replace(/\/+$/, '') : '';
+function getRequestSiteUrl() {
+  return CONFIGURED_SITE_URL || CANONICAL_SITE_URL;
 }
 
 // This is a PUBLIC page — no session check, on purpose: it's meant to be
