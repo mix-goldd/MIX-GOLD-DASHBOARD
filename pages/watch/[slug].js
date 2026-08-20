@@ -1,4 +1,6 @@
 import Head from 'next/head';
+import { useState } from 'react';
+import { buildShareText } from '../../lib/sharePost';
 import { listPosts } from '../../lib/siteDb';
 import { slugFromKey } from '../../lib/slug';
 import { formatDuration } from '../../lib/animeContent';
@@ -49,9 +51,42 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
   const siteDownloadUrl = siteUrl ? `${siteUrl}/?dl=${slug}` : `/?dl=${slug}`;
   const canonicalUrl = siteUrl ? `${siteUrl}/post/${slug}` : `/post/${slug}`;
   const shareDescription = [description, canonicalUrl || siteWatchUrl].filter(Boolean).join('\n\n');
-  // Facebook builds the post preview from this public page's OG image/title.
-  // Keep the actual publishing step in Facebook; this link only opens its composer.
-  const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl || siteWatchUrl)}`;
+  const shareText = buildShareText({ title, description, url: canonicalUrl || siteWatchUrl });
+  const [shareState, setShareState] = useState('');
+
+  async function sharePost() {
+    setShareState('');
+    try {
+      let files = [];
+      if (image && typeof window !== 'undefined') {
+        const imageResponse = await fetch(`/api/share-image?url=${encodeURIComponent(image)}`);
+        if (imageResponse.ok) {
+          const blob = await imageResponse.blob();
+          const extension = (blob.type.split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '');
+          files = [new File([blob], `mix-gold-${slug}.${extension}`, { type: blob.type || 'image/jpeg' })];
+        }
+      }
+
+      if (navigator.share) {
+        const shareData = { title, text: shareText };
+        if (files.length && navigator.canShare?.({ files })) shareData.files = files;
+        await navigator.share(shareData);
+        setShareState('تم فتح قائمة المشاركة؛ اختر Facebook.');
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+      setShareState('تم نسخ نص المنشور. الصقه في Facebook.');
+    } catch (error) {
+      if (error?.name === 'AbortError') return;
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setShareState('تعذر إرفاق الصورة تلقائيًا؛ تم نسخ النص للصقه في Facebook.');
+      } catch {
+        setShareState('انسخ النص يدويًا ثم الصقه في Facebook.');
+      }
+    }
+  }
 
   return (
     <>
@@ -83,15 +118,15 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
         </div>
         {description ? <p style={styles.description}>{description}</p> : null}
         <div style={styles.actions}>
-          <a
-            href={facebookShareUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            type="button"
+            onClick={sharePost}
             style={styles.primaryBtn}
-            aria-label="مشاركة المنشور على Facebook"
+            aria-label="مشاركة نص المنشور وصورته"
           >
             مشاركة المنشور
-          </a>
+          </button>
+          {shareState ? <div style={styles.shareState} role="status">{shareState}</div> : null}
           {post.download_url ? (
             <a href={siteDownloadUrl} style={styles.secondaryBtn}>
               تحميل
@@ -126,9 +161,12 @@ const styles = {
     color: '#fff',
     padding: '12px 22px',
     borderRadius: 10,
-    textDecoration: 'none',
+    border: 0,
+    cursor: 'pointer',
     fontWeight: 600,
+    fontSize: 15,
   },
+  shareState: { width: '100%', color: '#c9c9c9', fontSize: 13, lineHeight: 1.6 },
   secondaryBtn: {
     background: '#262626',
     color: '#fff',

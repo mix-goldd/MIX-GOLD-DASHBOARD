@@ -3,25 +3,28 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
 const source = fs.readFileSync('pages/watch/[slug].js', 'utf8');
+const helper = fs.readFileSync('lib/sharePost.js', 'utf8');
+const imageProxy = fs.readFileSync('pages/api/share-image.js', 'utf8');
 
-test('watch page opens Facebook share composer instead of site watch link', () => {
-  assert.match(source, /https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/);
-  assert.match(source, /CANONICAL_SITE_URL = 'https:\/\/mix-goldd\.vercel\.app'/);
-  assert.doesNotMatch(source, /VERCEL_URL/);
-  assert.doesNotMatch(source, /x-forwarded-host/);
-  assert.match(source, /مشاركة المنشور/);
-  assert.match(source, /target="_blank"/);
-  assert.match(source, /rel="noopener noreferrer"/);
-  assert.doesNotMatch(source, /مشاهدة على الموقع/);
-  assert.doesNotMatch(source, /facebookShareUrl \?/);
-  assert.match(source, /`\$\{siteUrl\}\/post\/\$\{slug\}`/);
+test('watch page shares formatted text through the device share sheet', () => {
+  assert.match(source, /navigator\.share/);
+  assert.match(source, /shareText = buildShareText/);
+  assert.match(source, /fetch\(`\/api\/share-image\?url=/);
+  assert.match(source, /navigator\.canShare/);
+  assert.match(source, /اختر Facebook/);
+  assert.doesNotMatch(source, /facebook\.com\/sharer\/sharer\.php/);
+  assert.doesNotMatch(source, /target="_blank"/);
 });
 
-test('watch page keeps download action and public preview metadata', () => {
-  assert.match(source, /تحميل/);
-  assert.match(source, /og:image/);
-  assert.match(source, /og:title/);
-  assert.match(source, /findVidmolyLibraryMatch/);
-  assert.match(source, /vidmolyThumbnail \|\| post\.thumbnail_url/);
-  assert.match(source, /shareDescription = \[description, canonicalUrl \|\| siteWatchUrl\]/);
+test('share text preserves title, blank line, summary, blank line, and canonical URL', () => {
+  assert.match(helper, /return \[title, description, url\].*join\('\\n\\n'\)/s);
+  assert.match(source, /canonicalUrl = siteUrl \? `\$\{siteUrl\}\/post\/\$\{slug\}`/);
+  assert.match(source, /aria-label="مشاركة نص المنشور وصورته"/);
+});
+
+test('share image proxy only accepts approved HTTPS image hosts', () => {
+  assert.match(imageProxy, /ALLOWED_HOSTS/);
+  assert.match(imageProxy, /target\.protocol !== 'https:'/);
+  assert.match(imageProxy, /contentType\.startsWith\('image\/'\)/);
+  assert.match(imageProxy, /Cache-Control/);
 });
