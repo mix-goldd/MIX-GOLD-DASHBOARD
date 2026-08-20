@@ -6,10 +6,13 @@ const source = fs.readFileSync('pages/watch/[slug].js', 'utf8');
 
 test('watch page opens Facebook share composer instead of site watch link', () => {
   assert.match(source, /https:\/\/www\.facebook\.com\/sharer\/sharer\.php\?u=/);
+  assert.match(source, /VERCEL_URL/);
+  assert.match(source, /x-forwarded-host/);
   assert.match(source, /مشاركة المنشور/);
   assert.match(source, /target="_blank"/);
   assert.match(source, /rel="noopener noreferrer"/);
   assert.doesNotMatch(source, /مشاهدة على الموقع/);
+  assert.doesNotMatch(source, /facebookShareUrl \?/);
 });
 
 test('watch page keeps download action and public preview metadata', () => {

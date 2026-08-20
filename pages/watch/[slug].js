@@ -3,16 +3,22 @@ import { listPosts } from '../../lib/siteDb';
 import { slugFromKey } from '../../lib/slug';
 import { formatDuration } from '../../lib/animeContent';
 
-// Set this once the site's real domain is known — used to build the
-// canonical URL, the OG "og:url" tag, and the "watch on the site" /
-// "download" links back into the main S-E app's ?post=/?dl= views.
-// Falls back to a relative link if it isn't set, so this still works
-// (minus the canonical/og:url tag) even before it's configured.
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
+// Prefer the public site URL, then Vercel's production host, then the
+// current request host. This keeps Facebook share links absolute in production.
+const CONFIGURED_SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || '').replace(/\/+$/, '');
+const VERCEL_SITE_URL = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '';
+
+function getRequestSiteUrl(req) {
+  if (CONFIGURED_SITE_URL) return CONFIGURED_SITE_URL;
+  if (VERCEL_SITE_URL) return VERCEL_SITE_URL;
+  const host = req?.headers?.['x-forwarded-host'] || req?.headers?.host;
+  const protocol = req?.headers?.['x-forwarded-proto'] || 'https';
+  return host ? `${protocol}://${host}`.replace(/\/+$/, '') : '';
+}
 
 // This is a PUBLIC page — no session check, on purpose: it's meant to be
 // shared/crawled (WhatsApp, Twitter, Google, etc.), same as the site itself.
-export async function getServerSideProps({ params }) {
+export async function getServerSideProps({ params, req }) {
   const { slug } = params;
 
   let post = null;
@@ -27,23 +33,21 @@ export async function getServerSideProps({ params }) {
     return { notFound: true };
   }
 
-  return { props: { post } };
+  return { props: { post, siteUrl: getRequestSiteUrl(req) } };
 }
 
-export default function WatchPage({ post }) {
+export default function WatchPage({ post, siteUrl }) {
   const title = post.title || '';
   const description = post.description || post.synopsis || '';
   const image = post.thumbnail_url || '';
   const slug = slugFromKey(post.thumbnail_url);
 
-  const siteWatchUrl = SITE_URL ? `${SITE_URL}/?post=${slug}` : `/?post=${slug}`;
-  const siteDownloadUrl = SITE_URL ? `${SITE_URL}/?dl=${slug}` : `/?dl=${slug}`;
-  const canonicalUrl = SITE_URL ? `${SITE_URL}/watch/${slug}` : null;
+  const siteWatchUrl = siteUrl ? `${siteUrl}/?post=${slug}` : `/?post=${slug}`;
+  const siteDownloadUrl = siteUrl ? `${siteUrl}/?dl=${slug}` : `/?dl=${slug}`;
+  const canonicalUrl = siteUrl ? `${siteUrl}/watch/${slug}` : null;
   // Facebook builds the post preview from this public page's OG image/title.
   // Keep the actual publishing step in Facebook; this link only opens its composer.
-  const facebookShareUrl = SITE_URL
-    ? `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl || siteWatchUrl)}`
-    : null;
+  const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl || siteWatchUrl)}`;
 
   return (
     <>
@@ -75,17 +79,15 @@ export default function WatchPage({ post }) {
         </div>
         {description ? <p style={styles.description}>{description}</p> : null}
         <div style={styles.actions}>
-          {facebookShareUrl ? (
-            <a
-              href={facebookShareUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.primaryBtn}
-              aria-label="مشاركة المنشور على Facebook"
-            >
-              مشاركة المنشور
-            </a>
-          ) : null}
+          <a
+            href={facebookShareUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={styles.primaryBtn}
+            aria-label="مشاركة المنشور على Facebook"
+          >
+            مشاركة المنشور
+          </a>
           {post.download_url ? (
             <a href={siteDownloadUrl} style={styles.secondaryBtn}>
               تحميل
