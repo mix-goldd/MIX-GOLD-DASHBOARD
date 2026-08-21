@@ -57,6 +57,14 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
   async function sharePost() {
     setShareState('');
     try {
+      const isDesktop = typeof window !== 'undefined' && window.matchMedia?.('(pointer: fine)').matches;
+      if (isDesktop) {
+        const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(canonicalUrl || siteWatchUrl)}&quote=${encodeURIComponent(shareText)}`;
+        const shareWindow = window.open(facebookShareUrl, '_blank', 'noopener,noreferrer');
+        setShareState(shareWindow ? 'تم فتح Facebook مع نص المنشور؛ ستظهر صورة Vidmoly من رابط المنشور.' : 'اسمح بالنوافذ المنبثقة لفتح Facebook.');
+        return;
+      }
+
       let files = [];
       if (image && typeof window !== 'undefined') {
         const imageResponse = await fetch(`/api/share-image?url=${encodeURIComponent(image)}`);

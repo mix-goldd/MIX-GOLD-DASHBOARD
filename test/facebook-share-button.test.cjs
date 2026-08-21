@@ -8,12 +8,15 @@ const imageProxy = fs.readFileSync('pages/api/share-image.js', 'utf8');
 
 test('watch page shares formatted text through the device share sheet', () => {
   assert.match(source, /navigator\.share/);
+  assert.match(source, /window\.matchMedia\?\.\('\(pointer: fine\)'\)/);
+  assert.match(source, /facebook\.com\/sharer\/sharer\.php\?u=/);
+  assert.match(source, /quote=\$\{encodeURIComponent\(shareText\)\}/);
   assert.match(source, /shareText = buildShareText/);
   assert.match(source, /fetch\(`\/api\/share-image\?url=/);
   assert.match(source, /navigator\.canShare/);
   assert.match(source, /اختر Facebook/);
-  assert.doesNotMatch(source, /facebook\.com\/sharer\/sharer\.php/);
-  assert.doesNotMatch(source, /target="_blank"/);
+  assert.doesNotMatch(source, /href=\{facebookShareUrl\}/);
+  assert.match(source, /window\.open\(facebookShareUrl, '_blank'/);
 });
 
 test('share text preserves title, blank line, summary, blank line, and canonical URL', () => {
