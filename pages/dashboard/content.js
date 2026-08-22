@@ -6,6 +6,7 @@ import { getSetting, listPosts, listModels, listMediaItems } from '../../lib/sit
 import { findMediaLibraryMatch } from '../../lib/mediaLibraryMatch';
 import { POST_TYPES, formatDuration, normalizeCategories, normalizeContentTypes } from '../../lib/animeContent';
 import { slugFromKey } from '../../lib/slug';
+import { getPostWorkflow, getWorkflowLabel, normalizeWorkflow, STATUS } from '../../lib/postPublishingWorkflow';
 
 const DEFAULT_CATEGORIES = ['Shonen', 'Seinen', 'Shojo', 'Isekai', 'Mecha', 'Slice of Life'];
 const EMPTY_FORM = {
@@ -42,15 +43,17 @@ export async function getServerSideProps({ req }) {
   let mediaItems = [];
   let categories = DEFAULT_CATEGORIES;
   let contentTypes = POST_TYPES;
+  let publishingWorkflow = {};
 
   try {
     let rawCategories;
-    [posts, models, mediaItems, rawCategories, contentTypes] = await Promise.all([
+    [posts, models, mediaItems, rawCategories, contentTypes, publishingWorkflow] = await Promise.all([
       listPosts(),
       listModels(),
       listMediaItems(),
       getSetting('video_categories', DEFAULT_CATEGORIES),
       getSetting('content_types', POST_TYPES),
+      getSetting('post_publishing_workflow', {}),
     ]);
     categories = normalizeCategories(rawCategories)
       .filter((c) => c.enabled)
@@ -68,6 +71,7 @@ export async function getServerSideProps({ req }) {
       mediaItems,
       categories,
       contentTypes: normalizeContentTypes(contentTypes),
+      publishingWorkflow: normalizeWorkflow(publishingWorkflow),
     },
   };
 }
@@ -81,6 +85,18 @@ async function postJSON(url, body) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'فشل النشر على الموقع');
   return data;
+}
+
+function toLocalDateTimeValue(date = new Date(Date.now() + 60 * 60 * 1000)) {
+  const offset = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function formatScheduledDate(iso) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
 }
 
 function normalizeText(value) {
@@ -161,6 +177,7 @@ export default function AnimeContent({
   categories: initialCategories,
   contentTypes,
   mediaItems: initialMediaItems,
+  publishingWorkflow: initialPublishingWorkflow,
 }) {
   const [posts, setPosts] = useState(initialPosts);
   const [models, setModels] = useState(initialModels);
@@ -188,6 +205,15 @@ export default function AnimeContent({
   const [uploadError, setUploadError] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState(null);
+  const [publishingWorkflow, setPublishingWorkflow] = useState(normalizeWorkflow(initialPublishingWorkflow));
+  const [workflowClock, setWorkflowClock] = useState(() => Date.now());
+  const [scheduleEditorId, setScheduleEditorId] = useState(null);
+  const [scheduleDraft, setScheduleDraft] = useState('');
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setWorkflowClock(Date.now()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // "شخصية أنمي" (model) entries live in their own `models` table — the
   // site's Models section only ever reads from there, not from `posts` —
@@ -208,6 +234,130 @@ export default function AnimeContent({
       (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
     );
   }, [posts, models]);
+
+  const postWorkflowItems = useMemo(
+    () => posts.map((post) => ({ post, workflow: getPostWorkflow(publishingWorkflow, post.id, new Date(workflowClock)) })),
+    [posts, publishingWorkflow, workflowClock]
+  );
+  const pendingShareItems = postWorkflowItems.filter(({ workflow }) =>
+    [STATUS.NEEDS_SCHEDULE, STATUS.READY_FOR_APPROVAL, STATUS.APPROVED_FOR_MANUAL_SHARE].includes(workflow.status)
+  );
+
+  async function updatePublishingWorkflow(action, postId, extra = {}) {
+    try {
+      const { workflow } = await postJSON('/api/content/publishing-workflow', {
+        action,
+        post_id: postId,
+        ...extra,
+      });
+      setPublishingWorkflow(normalizeWorkflow(workflow));
+      setWorkflowClock(Date.now());
+      return true;
+    } catch (err) {
+      setStatus({ type: 'error', message: err.message || 'تعذر حفظ حالة المشاركة.' });
+      return false;
+    }
+  }
+
+  function startSchedule(postId, currentWorkflow) {
+    const date = currentWorkflow?.scheduled_at ? new Date(currentWorkflow.scheduled_at) : new Date(Date.now() + 60 * 60 * 1000);
+    setScheduleEditorId(postId);
+    setScheduleDraft(toLocalDateTimeValue(date));
+  }
+
+  async function saveSchedule(postId) {
+    if (!scheduleDraft) {
+      setStatus({ type: 'error', message: 'اختر موعدًا للمشاركة أولًا.' });
+      return;
+    }
+    const ok = await updatePublishingWorkflow('schedule', postId, { scheduled_at: new Date(scheduleDraft).toISOString() });
+    if (ok) {
+      setScheduleEditorId(null);
+      setStatus({ type: 'success', message: 'تمت جدولة تذكير المشاركة. سيظهر طلب اعتماد عند حلول الموعد.' });
+    }
+  }
+
+  async function approveManualShare(item) {
+    const ok = await updatePublishingWorkflow('approve', item.id);
+    if (!ok) return;
+    setStatus({ type: 'success', message: 'تم الاعتماد. افتح المشاركة الآن، ثم أكد الإتمام عند عودتك.' });
+    window.open(`/watch/${slugFromKey(item.thumbnail_url)}`, '_blank', 'noopener,noreferrer');
+  }
+
+  async function confirmShared(postId) {
+    const ok = await updatePublishingWorkflow('confirm_shared', postId);
+    if (ok) setStatus({ type: 'success', message: 'تم تسجيل تأكيدك للمشاركة. لا يوجد نشر تلقائي.' });
+  }
+
+  async function skipShare(postId) {
+    const reason = window.prompt('اكتب سبب تخطي مشاركة هذا المنشور:');
+    if (reason === null) return;
+    const ok = await updatePublishingWorkflow('skip', postId, { reason });
+    if (ok) setStatus({ type: 'success', message: 'تم التخطي مع حفظ السبب. يمكنك إعادة الجدولة لاحقًا.' });
+  }
+
+  function renderPublishingControls(item) {
+    if (item._kind !== 'post') return null;
+    const workflow = getPostWorkflow(publishingWorkflow, item.id, new Date(workflowClock));
+    const shared = workflow.status === STATUS.CONFIRMED_SHARED;
+    const due = workflow.status === STATUS.READY_FOR_APPROVAL;
+    const approved = workflow.status === STATUS.APPROVED_FOR_MANUAL_SHARE;
+    const scheduleOpen = scheduleEditorId === item.id;
+
+    return (
+      <div
+        style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <span
+          style={{
+            fontSize: 12,
+            borderRadius: 999,
+            padding: '4px 8px',
+            background: shared ? 'rgba(80, 200, 120, .15)' : due ? 'rgba(255, 179, 0, .16)' : 'rgba(96, 165, 250, .14)',
+            color: shared ? '#86efac' : due ? '#fcd34d' : '#bfdbfe',
+          }}
+        >
+          <i className={shared ? 'fas fa-check-circle' : due ? 'fas fa-bell' : 'far fa-clock'} /> {getWorkflowLabel(workflow)}
+        </span>
+        {workflow.scheduled_at ? <span className="helper-text">{formatScheduledDate(workflow.scheduled_at)}</span> : null}
+
+        {!shared && !approved && !due ? (
+          <button type="button" className="btn" onClick={() => startSchedule(item.id, workflow)}>
+            <i className="far fa-calendar-alt" /> {workflow.status === STATUS.SCHEDULED ? 'تعديل الموعد' : 'جدولة التذكير'}
+          </button>
+        ) : null}
+        {due ? (
+          <button type="button" className="btn btn-primary" onClick={() => approveManualShare(item)}>
+            <i className="fas fa-check" /> اعتماد وفتح المشاركة
+          </button>
+        ) : null}
+        {approved ? (
+          <>
+            <button type="button" className="btn" onClick={() => window.open(`/watch/${slugFromKey(item.thumbnail_url)}`, '_blank', 'noopener,noreferrer')}>
+              <i className="fas fa-share-alt" /> فتح المشاركة
+            </button>
+            <button type="button" className="btn btn-primary" onClick={() => confirmShared(item.id)}>
+              <i className="fas fa-check-circle" /> تأكيد تمت المشاركة
+            </button>
+          </>
+        ) : null}
+        {!shared ? (
+          <button type="button" className="btn" onClick={() => skipShare(item.id)} title="لن يعتبر مكتملًا إلا بعد حفظ سبب التخطي">
+            تخطي مع سبب
+          </button>
+        ) : null}
+
+        {scheduleOpen ? (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', marginTop: 4 }}>
+            <input type="datetime-local" value={scheduleDraft} onChange={(event) => setScheduleDraft(event.target.value)} />
+            <button type="button" className="btn btn-primary" onClick={() => saveSchedule(item.id)}>حفظ الموعد</button>
+            <button type="button" className="btn" onClick={() => setScheduleEditorId(null)}>إلغاء</button>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
 
   const studioOptions = useMemo(() => {
     const values = new Set();
@@ -624,10 +774,26 @@ export default function AnimeContent({
               </div>
             )}
 
+            {posts.length > 0 ? (
+              <div className="card" style={{ marginBottom: 16, padding: 16 }}>
+                <div className="am-row-between" style={{ alignItems: 'center', gap: 12 }}>
+                  <div>
+                    <strong><i className="fas fa-bell" /> متابعة مشاركة Facebook</strong>
+                    <p className="helper-text" style={{ margin: '6px 0 0' }}>
+                      لا تعتبر مشاركة المنشور مكتملة إلا بعد الجدولة ثم اعتمادك وتأكيدك اليدوي، أو تخطيه مع سبب محفوظ.
+                    </p>
+                  </div>
+                  <span style={{ borderRadius: 999, padding: '6px 10px', background: pendingShareItems.length ? 'rgba(255, 179, 0, .16)' : 'rgba(80, 200, 120, .15)', color: pendingShareItems.length ? '#fcd34d' : '#86efac', whiteSpace: 'nowrap' }}>
+                    {pendingShareItems.length ? `${pendingShareItems.length} معلقة` : 'لا توجد مشاركة معلقة'}
+                  </span>
+                </div>
+              </div>
+            ) : null}
+
             {allItems.length === 0 ? (
               <div className="empty-state">
                 <span className="tally-dot" />
-                <p>لا يوجد محتوى بعد — أضف أول عنصر وسينشر مباشرة على موقع S-E.</p>
+                <p>لا يوجد محتوى بعد — أضف أول عنصر ثم جدول تذكير مشاركته على Facebook.</p>
               </div>
             ) : (
               <div className="am-posts-list">
@@ -654,6 +820,7 @@ export default function AnimeContent({
                           </span>
                         ) : null}
                       </div>
+                      {renderPublishingControls(item)}
                     </div>
                     <button
                       className="am-icon-btn"
