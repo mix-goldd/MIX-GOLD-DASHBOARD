@@ -4,7 +4,7 @@ const { isPublicSiteHost } = require('../lib/domainRouting');
 
 export async function getServerSideProps({ req }) {
   if (isPublicSiteHost(req?.headers?.['x-forwarded-host'] || req?.headers?.host)) {
-    return { redirect: { destination: '/site', permanent: false } };
+    return { redirect: { destination: '/site/index.html', permanent: false } };
   }
 
   const session = getSessionFromReq(req);

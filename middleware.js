@@ -20,8 +20,8 @@ function routeForHost(hostname, pathname) {
   const path = pathname || '/';
 
   if (host === PUBLIC_SITE_HOST || host === `www.${PUBLIC_SITE_HOST}`) {
-    if (path === '/' || path === '/login' || path === '/setup' || path.startsWith('/dashboard')) {
-      return { type: 'internal', destination: '/site' };
+    if (path === '/' || path === '/site' || path === '/site/' || path === '/login' || path === '/setup' || path.startsWith('/dashboard')) {
+      return { type: 'internal', destination: '/site/index.html' };
     }
     return null;
   }
@@ -56,7 +56,7 @@ export function middleware(request) {
 
   const destination = request.nextUrl.clone();
   destination.pathname = route.destination;
-  return NextResponse.redirect(destination);
+  return NextResponse.rewrite(destination);
 }
 
 export const config = {

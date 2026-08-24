@@ -5,18 +5,25 @@ const { routeForHost } = require('../lib/domainRouting');
 test('يوجه جذر النطاق العام إلى واجهة الموقع لا إلى صفحة دخول اللوحة', () => {
   assert.deepEqual(routeForHost('mix-goldd.vercel.app', '/'), {
     type: 'internal',
-    destination: '/site',
+    destination: '/site/index.html',
   });
 });
 
 test('يمنع مسارات لوحة التحكم من الظهور على النطاق العام', () => {
   assert.deepEqual(routeForHost('mix-goldd.vercel.app', '/dashboard/content'), {
     type: 'internal',
-    destination: '/site',
+    destination: '/site/index.html',
   });
   assert.deepEqual(routeForHost('mix-goldd.vercel.app', '/login'), {
     type: 'internal',
-    destination: '/site',
+    destination: '/site/index.html',
+  });
+});
+
+test('يتجاوز مسار الموقع العام الديناميكي صفحة /site الخادمية ويستخدم ملف HTML الثابت', () => {
+  assert.deepEqual(routeForHost('mix-goldd.vercel.app', '/site'), {
+    type: 'internal',
+    destination: '/site/index.html',
   });
 });
 
