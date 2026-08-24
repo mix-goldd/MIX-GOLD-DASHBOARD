@@ -8,8 +8,14 @@ const publicSiteSource = fs.readFileSync(
 
 describe('واجهة الموقع العام الحديثة', () => {
   it('تستخدم شعار MIX GOLD الحديث ولا تعود إلى شعار PulseX القديم', () => {
-    expect(publicSiteSource).toContain('Picsart-26-08-17-15-37-39-933.png');
+    expect(publicSiteSource).toContain('/site/assets/mix-gold-logo.webp');
     expect(publicSiteSource).not.toContain('KAz9Ybt.jpg');
+  });
+
+  it('تحتفظ بصور البطاقات عبر مسار احتياطي محلي عند تعذر الرابط الخارجي', () => {
+    expect(publicSiteSource).toContain("const preferredThumbnail = relationMedia.thumbnail || post.thumbnail_url || legacyImages[0] || '/site/assets/default-post-cover.webp'");
+    expect(publicSiteSource).toContain("img.src = '/site/assets/default-post-cover.webp'");
+    expect(publicSiteSource).toContain("img.referrerPolicy = 'no-referrer'");
   });
 
   it('تدعم تسمية رقم الحلقة داخل بطاقات المنشورات', () => {

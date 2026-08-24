@@ -4145,7 +4145,7 @@
             <button class="menu-toggle" onclick="toggleSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
-            <img src="https://i.ibb.co/bjyKccjV/Picsart-26-08-17-15-37-39-933.png" alt="MIX GOLD Logo" class="header-logo" id="header-logo-img" onclick="navigateTo('home')">
+            <img src="/site/assets/mix-gold-logo.webp" alt="MIX GOLD Logo" class="header-logo" id="header-logo-img" onclick="navigateTo('home')">
             <span class="header-page-title" id="header-page-title"></span>
             <div class="header-controls">
                 <button class="search-toggle" onclick="toggleSearch()">
@@ -4854,18 +4854,22 @@
                         ? post.categories
                         : (post.category ? [post.category] : []);
                     const legacyImages = Array.isArray(post.images) ? post.images : [];
-                    const relationMedia = mediaByPost.get(post.id) || { thumbnail: '', images: [] };
+                    const relationMedia = !mediaRes.error
+                        ? (mediaByPost.get(post.id) || { thumbnail: '', images: [] })
+                        : { thumbnail: '', images: [] };
                     const relationDetails = detailsByPost.get(post.id) || {};
                     const relationLinks = linksByPost.get(post.id) || {};
                     const relationMetrics = metricsByPost.get(post.id) || {};
+                    const preferredThumbnail = relationMedia.thumbnail || post.thumbnail_url || legacyImages[0] || '/site/assets/default-post-cover.webp';
+                    const preferredImages = relationMedia.images.length ? relationMedia.images : legacyImages;
                     return {
                         details: relationDetails,
                         categories: relationRowsReady ? (categoriesByPost.get(post.id) || []) : legacyCategories,
                         starIds: relationRowsReady ? (starsByPost.get(post.id) || []) : (post.model_id ? [post.model_id] : []),
                         watchUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.watch || '') : (post.page_url || '')),
                         downloadUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.download || '') : (post.download_url || post.page_url || '')),
-                        thumbnailUrl: relationRowsReady ? (relationMedia.thumbnail || '') : (post.thumbnail_url || ''),
-                        imageUrls: relationRowsReady && relationMedia.images.length ? relationMedia.images : legacyImages,
+                        thumbnailUrl: preferredThumbnail,
+                        imageUrls: preferredImages.length ? preferredImages : [preferredThumbnail],
                         views: relationRowsReady ? (relationMetrics.views ?? 0) : (post.views || 0),
                         likes: relationRowsReady ? (relationMetrics.likes_count ?? 0) : (post.likes || 0)
                     };
@@ -7110,6 +7114,12 @@
             img.src = character.url;
             img.loading = "lazy";
             img.alt = character.name;
+            img.referrerPolicy = 'no-referrer';
+            img.addEventListener('error', () => {
+                if (img.dataset.localFallbackApplied === 'true') return;
+                img.dataset.localFallbackApplied = 'true';
+                img.src = '/site/assets/default-post-cover.webp';
+            });
             wrapper.appendChild(img);
             const dateSpan = document.createElement('div');
             dateSpan.className = 'post-date';
