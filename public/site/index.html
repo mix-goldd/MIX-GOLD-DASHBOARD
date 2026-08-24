@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>S-E</title>
+    <title>MIX GOLD</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <style>
@@ -110,15 +110,35 @@
             position: absolute;
             left: 50%;
             transform: translateX(-50%);
-            font-size: 1.1rem;
+            font-size: var(--header-page-title-font-size, 1.1rem);
             font-weight: 700;
             color: var(--text-color);
             display: none;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 55%;
+            max-width: var(--header-page-title-max-width, 55%);
+            line-height: 1.2;
+            transition: font-size 0.18s cubic-bezier(0.23, 1, 0.32, 1);
             pointer-events: none;
+            unicode-bidi: plaintext;
+        }
+
+        .header-title-episode {
+            unicode-bidi: isolate;
+        }
+
+        @media (max-width: 480px) {
+            .header-page-title {
+                /* يظل العنوان الطويل مقروءًا ويظهر كاملًا بين أزرار الترويسة. */
+                max-width: var(--header-page-title-max-width, 58%);
+                font-size: var(--header-page-title-font-size, 0.9375rem);
+                line-height: 1.18;
+                white-space: normal;
+                overflow: visible;
+                text-overflow: clip;
+                text-align: center;
+            }
         }
 
         .header-controls {
@@ -145,8 +165,8 @@
         }
 
         .menu-toggle, .search-toggle {
-            background: none;
-            border: none;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.12);
             color: var(--text-color);
             font-size: 1.3rem;
             cursor: pointer;
@@ -157,16 +177,27 @@
             justify-content: center;
             border-radius: 50%;
             padding: 4px;
-            transition: background-color 0.2s;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
         }
 
         .menu-toggle:hover, .search-toggle:hover {
-            background-color: rgba(255,255,255,0.1);
+            background-color: rgba(255,71,87,0.14);
+            border-color: rgba(255,71,87,0.55);
+            color: #fff;
+            transform: translateY(-1px);
         }
 
         .light-mode .menu-toggle:hover,
         .light-mode .search-toggle:hover {
-            background-color: rgba(0,0,0,0.1);
+            background-color: rgba(255,71,87,0.10);
+            border-color: rgba(255,71,87,0.45);
+            color: var(--primary-color);
+        }
+
+        .light-mode .menu-toggle,
+        .light-mode .search-toggle {
+            background: rgba(0,0,0,0.03);
+            border-color: rgba(0,0,0,0.12);
         }
 
         #preloader {
@@ -211,11 +242,13 @@
             justify-content: center;
             visibility: hidden;
             opacity: 0;
+            pointer-events: none;
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
         #agreement-overlay.active {
             visibility: visible;
             opacity: 1;
+            pointer-events: auto;
         }
         .agreement-modal {
             background: var(--card-bg);
@@ -396,6 +429,8 @@
         .menu-item.active {
             color: var(--primary-color);
             font-weight: bold;
+            background-color: rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
         }
 
         .menu-item-locked {
@@ -468,6 +503,16 @@
         }
         .dropdown-toggle.open .dropdown-arrow {
             transform: rotate(180deg);
+        }
+        .comics-dropdown-controls {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .comics-dropdown-controls .dropdown-arrow,
+        .comics-dropdown-controls .nav-lock-icon {
+            margin-left: 0;
         }
         .dropdown-content {
             max-height: 0;
@@ -934,6 +979,11 @@
             aspect-ratio: 16 / 9;
             overflow: hidden;
         }
+        /* Requested preview: portrait cards appear only on Manus preview domains. */
+        html.manus-portrait-card-preview .image-card .image-wrapper,
+        body.manus-portrait-card-preview .image-card .image-wrapper {
+            aspect-ratio: 2 / 3 !important;
+        }
         .image-wrapper img {
             width: 100%;
             height: 100%;
@@ -1014,15 +1064,25 @@
             padding: 12px;
         }
         .post-title {
-            display: block;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
             font-size: 0.9rem;
             font-weight: 600;
             margin-bottom: 8px;
             color: var(--text-color);
             line-height: 1.3;
+            min-width: 0;
+        }
+        .post-title-main {
+            min-width: 0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+        .post-title-episode {
+            flex: 0 0 auto;
+            white-space: nowrap;
         }
         .post-stats-row {
             display: flex;
@@ -1198,8 +1258,33 @@
 
         #home-view .sort-dropdown {
             left: auto;
-            right: -10;
+            right: -10px;
             transform: none;
+        }
+
+        @media (max-width: 640px) {
+            /* قائمة فرز Anime تتصل بزر الفرز وتفتح تحته بحجم مناسب للهاتف. */
+            #videos-page-sort-dropdown .sort-dropdown.show {
+                position: absolute;
+                top: calc(100% + 8px);
+                right: 0;
+                left: auto;
+                transform: none;
+                width: max-content;
+                min-width: 0;
+                max-width: calc(100vw - 24px);
+                box-sizing: border-box;
+                padding: 3px;
+                overflow: hidden;
+                z-index: 70;
+            }
+
+            #videos-page-sort-dropdown .sort-dropdown.show .sort-option {
+                width: auto;
+                min-height: 34px;
+                padding: 7px 10px;
+                white-space: nowrap;
+            }
         }
 
         .light-mode .sort-dropdown {
@@ -1214,6 +1299,8 @@
             display: flex;
             align-items: center;
             justify-content: center !important;
+            width: 100%;
+            box-sizing: border-box;
             padding: 10px 14px;
             border-radius: 8px;
             cursor: pointer;
@@ -1221,7 +1308,7 @@
             color: var(--sort-dropdown-text);
             font-size: 0.9rem;
             white-space: nowrap;
-            text-align: center;
+            text-align: center !important;
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -1273,6 +1360,75 @@
 
         .post-detail.active { display: flex; }
 
+        .post-not-found {
+            display: none;
+            min-height: calc(100vh - 180px);
+            padding: 32px 16px;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+
+        .post-not-found.active { display: flex; }
+
+        .post-not-found-card {
+            width: min(100%, 520px);
+            padding: 36px 24px;
+            border: 1px solid color-mix(in srgb, var(--text-color) 16%, transparent);
+            border-radius: 20px;
+            background: var(--card-bg);
+            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        .post-not-found-icon {
+            width: 62px;
+            height: 62px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: color-mix(in srgb, var(--primary-color) 18%, transparent);
+            color: var(--primary-color);
+            font-size: 1.7rem;
+        }
+
+        .post-not-found-code {
+            margin: 0 0 4px;
+            color: var(--primary-color);
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 0.04em;
+        }
+
+        .post-not-found-card h1 {
+            margin: 0;
+            color: var(--text-color);
+            font-size: 1.35rem;
+        }
+
+        .post-not-found-card p {
+            margin: 8px 0 24px;
+            color: color-mix(in srgb, var(--text-color) 72%, transparent);
+            line-height: 1.6;
+        }
+
+        .post-not-found-home-btn {
+            border: 0;
+            border-radius: 12px;
+            padding: 12px 18px;
+            background: var(--primary-color);
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), filter 160ms cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        .post-not-found-home-btn:hover { filter: brightness(1.08); }
+        .post-not-found-home-btn:active { transform: scale(0.97); }
+
         .video-container {
             width: 100%;
             aspect-ratio: 16 / 9;
@@ -1310,14 +1466,19 @@
             max-width: 100% !important;
             box-sizing: border-box;
             margin-bottom: 15px;
+            padding: 16px;
+            background: var(--card-bg);
+            border-radius: 16px;
         }
 
         .models-flex {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            box-sizing: border-box;
         }
 
         .suggested-related-section {
@@ -1684,6 +1845,9 @@
             font-size: 1rem;
             line-height: 1.6;
             color: var(--text-color);
+            text-align: right;
+            direction: rtl;
+            unicode-bidi: plaintext;
             max-height: 78px;
             overflow: hidden;
             transition: max-height 0.5s ease-in-out;
@@ -1851,6 +2015,9 @@
             color: var(--primary-color);
             font-size: 1.4rem;
         }
+        .models-section .section-title {
+            margin: 0 0 12px;
+        }
         .category-tags {
             display: flex;
             gap: 12px;
@@ -1858,42 +2025,62 @@
         }
 
         .model-card {
-            position: relative;
-            background: var(--card-bg);
-            border-radius: 12px;
-            overflow: hidden;
-            aspect-ratio: 2 / 3;
-            width: calc(33.33% - 10px);
-            max-width: 160px;
+            display: inline-flex;
+            align-items: center;
+            min-width: 0;
+            min-height: 42px;
+            gap: 8px;
+            padding: 2px 0;
+            background: transparent;
+            border: 0;
+            border-radius: 0;
             cursor: pointer;
-            transition: transform 0.2s;
+            transition: color 160ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
         }
         .model-card:hover {
-            transform: scale(1.02);
+            transform: translateX(2px);
         }
         .model-card img {
-            width: 100%;
-            height: 100%;
+            width: 40px;
+            height: 40px;
+            flex: 0 0 40px;
             object-fit: cover;
+            border-radius: 50%;
+            border: 0;
         }
         .model-name {
-            position: absolute;
-            bottom: 3px;
-            left: 10px;
-            right: 10px;
-            text-align: center;
-            color: white;
-            font-size: 0.7rem;
+            position: static;
+            min-width: 0;
+            overflow: hidden;
+            display: block;
+            text-align: start;
+            color: var(--text-color);
+            font-size: 0.84rem;
             font-weight: bold;
-            background: rgba(0,0,0,0.5);
-            padding: 7px;
+            line-height: 1.3;
             margin: 0;
-            border-radius: 30px;
-            backdrop-filter: blur(0.5px);
+            white-space: nowrap;
+            text-overflow: ellipsis;
         }
 
+        .model-card-extra { display: none; }
+        .models-flex.expanded .model-card-extra { display: flex; }
+        .models-toggle {
+            margin-top: 9px;
+            padding: 0 4px;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .models-toggle[hidden] { display: none; }
+
         @media (max-width: 480px) {
-            .model-card { width: calc(50% - 10px); max-width: none; }
+            .models-section { padding: 14px; border-radius: 16px; }
+            .models-section .section-title { font-size: 1.3rem; margin-bottom: 11px; }
+            .models-flex { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+            .model-card { min-height: 44px; gap: 8px; padding: 2px 0; }
+            .model-card img { width: 42px; height: 42px; flex-basis: 42px; }
+            .model-name { font-size: 0.88rem; }
             .post-meta-links {
                 flex-direction: column;
                 align-items: flex-start;
@@ -2474,25 +2661,6 @@
         .extra-images-wrapper.show {
             display: flex;
         }
-        .pixiv-ad-slot {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: 10px 0;
-        }
-        .pixiv-ad-slot-label {
-            font-size: 0.7rem;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
-            color: #888;
-        }
-        .pixiv-ad-slot iframe {
-            border: none;
-            display: block;
-            max-width: 100%;
-        }
         @media (max-width: 600px) {
             .pixiv-action-bar {
                 padding: 10px 14px;
@@ -2858,15 +3026,27 @@
     cursor: pointer;
     color: var(--text-color);
     font-size: 1.1rem;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.16);
     border-radius: 50%;
-    transition: background-color 0.2s;
+    padding: 0;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s, transform 0.2s;
     flex-shrink: 0;
   }
   .pixiv-nav-back:hover, .pixiv-nav-next:hover {
-    background: rgba(255,255,255,0.1);
+    background: rgba(255,71,87,0.18);
+    border-color: rgba(255,71,87,0.65);
+    color: #fff;
+    transform: translateY(-1px);
   }
   .light-mode .pixiv-nav-back:hover, .light-mode .pixiv-nav-next:hover {
-    background: rgba(0,0,0,0.1);
+    background: rgba(255,71,87,0.10);
+    border-color: rgba(255,71,87,0.5);
+    color: var(--primary-color);
+  }
+  .light-mode .pixiv-nav-back, .light-mode .pixiv-nav-next {
+    background: rgba(0,0,0,0.04);
+    border-color: rgba(0,0,0,0.14);
   }
   .pixiv-nav-title {
     flex: 1;
@@ -3445,8 +3625,44 @@
         .manga-reader-nav-icons {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 8px;
             flex-shrink: 0;
+        }
+        #manga-reader-lang-btn,
+        #manga-reader-settings-btn {
+            width: 40px;
+            height: 40px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+        }
+        #manga-reader-lang-btn {
+            color: #8ea2ff;
+            background: rgba(55,66,250,0.18);
+            border-color: rgba(110,123,255,0.65);
+        }
+        #manga-reader-settings-btn {
+            color: #ffd166;
+            background: rgba(255,193,7,0.16);
+            border-color: rgba(255,209,102,0.62);
+        }
+        #manga-reader-lang-btn:hover {
+            color: #fff;
+            background: rgba(55,66,250,0.42);
+            border-color: #9aa7ff;
+        }
+        #manga-reader-settings-btn:hover {
+            color: #fff;
+            background: rgba(255,193,7,0.34);
+            border-color: #ffd166;
+        }
+        .light-mode #manga-reader-lang-btn {
+            color: #3044d8;
+            background: rgba(55,66,250,0.10);
+            border-color: rgba(55,66,250,0.42);
+        }
+        .light-mode #manga-reader-settings-btn {
+            color: #9a6500;
+            background: rgba(255,193,7,0.18);
+            border-color: rgba(154,101,0,0.42);
         }
         #manga-reader-view .pixiv-nav-title {
             text-align: left;
@@ -3671,6 +3887,23 @@
             display: block;
             pointer-events: none;
             transition: opacity 0.18s ease;
+            will-change: transform, opacity;
+        }
+        @keyframes manga-page-slide-from-right {
+            from { opacity: 0; transform: translate3d(100%, 0, 0); }
+            to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @keyframes manga-page-slide-from-left {
+            from { opacity: 0; transform: translate3d(-100%, 0, 0); }
+            to { opacity: 1; transform: translate3d(0, 0, 0); }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .manga-reader-viewport img.manga-page-slide-from-right {
+                animation: manga-page-slide-from-right 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+            }
+            .manga-reader-viewport img.manga-page-slide-from-left {
+                animation: manga-page-slide-from-left 280ms cubic-bezier(0.23, 1, 0.32, 1) both;
+            }
         }
         .manga-reader-tap-zone {
             position: absolute;
@@ -3733,9 +3966,105 @@
                 width: 170px;
             }
         }
+
+        /* لقطة معاينة Manus فقط: لا تغطّي نافذة الاتفاقية بطاقات 2:3. */
+        .manus-portrait-card-preview #agreement-overlay {
+            display: none !important;
+        }
+        /* معاينة Manus فقط: معلومات المنشور جزء من الصورة وليست حاوية مستقلة. */
+        .manus-portrait-card-preview .image-card.manus-image-info-card .post-info {
+            position: absolute;
+            inset: auto 0 0;
+            z-index: 3;
+            display: grid;
+            gap: 6px;
+            padding: 54px 10px 10px;
+            background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.78) 38%, rgba(0, 0, 0, 0.94) 100%);
+            pointer-events: none;
+        }
+        .manus-portrait-card-preview .image-card.manus-image-info-card .post-title {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 7px;
+            margin: 0;
+            color: #fff;
+            font-size: 0.84rem;
+            line-height: 1.25;
+            min-width: 0;
+        }
+        .manus-portrait-card-preview .image-card.manus-image-info-card .post-title-main {
+            display: block;
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .manus-portrait-card-preview .image-card.manus-image-info-card .post-title-episode {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            color: #fff;
+            font-size: 0.78rem;
+        }
+        .manus-portrait-card-preview .image-card.manus-image-info-card .post-stats-row {
+            justify-content: flex-start;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 0.75rem;
+        }
+        .manus-portrait-card-preview .image-card.manus-image-info-card .duration-badge {
+            display: none !important;
+            bottom: 82px;
+            right: 7px;
+            background: rgba(9, 13, 20, 0.46);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.24);
+            -webkit-backdrop-filter: blur(9px) saturate(1.15);
+            backdrop-filter: blur(9px) saturate(1.15);
+        }
     </style>
 </head>
 <body>
+    <script>
+        (() => {
+            const previewHostname = window.location.hostname.toLowerCase();
+            const isManusPreview = previewHostname.endsWith('.manus.space') || previewHostname === 'localhost' || previewHostname === '127.0.0.1';
+            if (!isManusPreview) return;
+
+            const applyManusCardPreview = (root = document) => {
+                const cards = [];
+                if (root instanceof Element && root.matches('.image-card')) cards.push(root);
+                root.querySelectorAll?.('.image-card').forEach((card) => cards.push(card));
+                cards.forEach((card) => {
+                    const wrapper = card.querySelector(':scope > .image-wrapper');
+                    const info = card.querySelector(':scope > .post-info');
+                    if (!wrapper) return;
+                    wrapper.style.setProperty('aspect-ratio', '2 / 3', 'important');
+                    if (info) wrapper.appendChild(info);
+                    card.classList.add('manus-image-info-card');
+                });
+            };
+
+            const activatePortraitPreview = () => {
+                document.documentElement.classList.add('manus-portrait-card-preview');
+                document.body.classList.add('manus-portrait-card-preview');
+                applyManusCardPreview();
+                new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => mutation.addedNodes.forEach((node) => {
+                        if (!(node instanceof Element)) return;
+                        applyManusCardPreview(node);
+                    }));
+                }).observe(document.body, { childList: true, subtree: true });
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', activatePortraitPreview, { once: true });
+            } else {
+                activatePortraitPreview();
+            }
+        })();
+    </script>
 
     <div id="preloader">
         <div class="spinner"></div>
@@ -3816,7 +4145,7 @@
             <button class="menu-toggle" onclick="toggleSidebar()">
                 <i class="fas fa-bars"></i>
             </button>
-            <img src="https://iili.io/KAz9Ybt.jpg" alt="PulseX Logo" class="header-logo" id="header-logo-img" onclick="navigateTo('home')">
+            <img src="https://i.ibb.co/bjyKccjV/Picsart-26-08-17-15-37-39-933.png" alt="MIX GOLD Logo" class="header-logo" id="header-logo-img" onclick="navigateTo('home')">
             <span class="header-page-title" id="header-page-title"></span>
             <div class="header-controls">
                 <button class="search-toggle" onclick="toggleSearch()">
@@ -3831,7 +4160,7 @@
 
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <div class="app-title">S-E</div>
+                <div class="app-title">MIX GOLD</div>
                 <button class="sidebar-login-icon" title="Login">
                     <i class="fas fa-user-circle"></i>
                 </button>
@@ -3858,11 +4187,11 @@
                     </div>
                     <div class="search-filters">
                         <div class="advanced-sort-select" id="filter-type-select">
-                            <div class="sort-trigger"><span>Videos</span> <i class="fas fa-chevron-down"></i></div>
+                            <div class="sort-trigger"><span>Anime</span> <i class="fas fa-chevron-down"></i></div>
                             <div class="sort-dropdown">
-                                <div class="sort-option active" data-value="videos">Videos</div>
+                                <div class="sort-option active" data-value="videos">Anime</div>
                                 <div class="sort-option" data-value="images">Images</div>
-                                <div class="sort-option" data-value="models">Models</div>
+                                <div class="sort-option" data-value="models">Stars</div>
                                 <div class="sort-option" data-value="manga">Manga</div>
                                 <div class="sort-option" data-value="manhwa">Manhwa</div>
                             </div>
@@ -3948,7 +4277,7 @@
 
         <div id="post-detail" class="post-detail">
             <div class="video-container">
-                <iframe id="vidmoly-player-iframe" title="Vidmoly video player" src="about:blank" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+                <iframe id="post-player-iframe" src="about:blank" title="Video player" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
             </div>
 
             <div class="actions-wrapper">
@@ -4005,21 +4334,19 @@
                 </div>
             </div>
 
-            <div class="description-box">
-                <div class="desc-text" id="desc-text">
-                    A highly detailed, photorealistic image of a specialized armless wheelchair. This wheelchair is designed for maximum mobility and comfort. It features a lightweight carbon fiber frame, ergonomic seating, and advanced shock absorption. The user can control movement via a sophisticated joystick system. This model is perfect for those who require a reliable and stylish mobility solution. Additionally, the wheelchair comes with customizable colors and accessories. The armless design allows for easier transfer and a more natural posture. With a battery life of up to 20 miles, it's ideal for daily use. Safety features include anti-tip wheels and LED lights. The intuitive control panel makes it easy to navigate through various terrains. This is a top-of-the-line product for users seeking independence and style.
-                </div>
+            <div class="description-box" id="post-description-section" hidden>
+                <div class="desc-text" id="desc-text"></div>
                 <button class="desc-toggle-btn" id="desc-toggle-btn" onclick="toggleDescription()">
                     <span>Show More</span> <i class="fas fa-chevron-down"></i>
                 </button>
             </div>
 
             <div class="post-meta-links">
-                <div class="meta-item">
+                <div class="meta-item" id="post-studio-meta">
                     <span class="meta-label"><i class="fas fa-video"></i> Studio:</span>
                     <button class="meta-link" id="post-studio-btn">B</button>
                 </div>
-                <div class="meta-item">
+                <div class="meta-item" id="post-series-meta">
                     <span class="meta-label"><i class="fas fa-list"></i> Series:</span>
                     <button class="meta-link" id="post-series-btn">C</button>
                 </div>
@@ -4043,9 +4370,9 @@
                 </div>
             </div>
 
-            <div class="models-section">
-                <div class="section-title"><i class="fas fa-star"></i> Models</div>
-                <div class="models-flex">
+            <div class="models-section" id="post-models-section">
+                <div class="section-title"><i class="fas fa-star"></i> Stars</div>
+                <div class="models-flex" id="post-models-list">
                     <div class="model-card" data-model-name="Monet">
                         <img src="https://iili.io/2b0TTFe.jpg" alt="Monet">
                         <div class="model-name">Monet (2)</div>
@@ -4055,6 +4382,9 @@
                         <div class="model-name">Reiju (2)</div>
                     </div>
                 </div>
+                <button class="desc-toggle-btn models-toggle" id="models-toggle-btn" type="button" aria-controls="post-models-list" aria-expanded="false" onclick="togglePostModels()" hidden>
+                    <span>Show More</span> <i class="fas fa-chevron-down"></i>
+                </button>
             </div>
 
             <div class="suggested-related-section">
@@ -4070,6 +4400,16 @@
                 </div>
             </div>
         </div>
+
+        <section id="post-not-found" class="post-not-found" role="alert" aria-labelledby="post-not-found-title">
+            <div class="post-not-found-card">
+                <div class="post-not-found-icon" aria-hidden="true"><i class="fas fa-circle-exclamation"></i></div>
+                <div class="post-not-found-code">404</div>
+                <h1 id="post-not-found-title">المنشور غير متوفر</h1>
+                <p>هذا المنشور غير موجود أو لم يعد متاحًا.<br>This post is unavailable or no longer exists.</p>
+                <button class="post-not-found-home-btn" type="button" onclick="navigateTo('home')">العودة إلى الصفحة الرئيسية / Back to Home</button>
+            </div>
+        </section>
 
         <div id="download-detail" class="download-detail">
             <div class="pixiv-detail-nav">
@@ -4089,7 +4429,7 @@
 
         <div id="image-detail-view" class="image-detail-container">
       <div class="pixiv-detail-nav">
-        <div class="pixiv-nav-back" onclick="navigateTo('images')"><i class="fas fa-chevron-left"></i></div>
+        <div class="pixiv-nav-back" onclick="returnToPreviousView('images')"><i class="fas fa-chevron-left"></i></div>
         <div class="pixiv-nav-title" id="pixiv-nav-title">Artwork Title</div>
         <div class="pixiv-nav-next" onclick="navigateNextImage()"><i class="fas fa-chevron-right"></i></div>
       </div>
@@ -4259,7 +4599,7 @@
                 <div class="model-stat-card">
                     <i class="fas fa-video"></i>
                     <span class="model-stat-value" id="model-videos-count">0</span>
-                    <span class="model-stat-label">Videos</span>
+                    <span class="model-stat-label">Anime</span>
                 </div>
                 <div class="model-stat-card">
                     <i class="fas fa-thumbs-up"></i>
@@ -4273,33 +4613,34 @@
                 </div>
             </div>
             <div class="model-posts-section">
-                <div class="section-title" id="model-posts-title">Related Videos</div>
+                <div class="section-title" id="model-posts-title">Related Anime</div>
                 <div id="model-posts-grid" class="model-posts-grid"></div>
             </div>
         </div>
     </div>
 
     <footer class="site-footer">
-        <p>© 2026 S-E - All rights reserved</p>
+        <p>© 2026 MIX GOLD - All rights reserved</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
     <script>
         const translations = {
             en: {
-                appTitle: "S-E", gallery: "Gallery", saved: "Saved", settings: "Settings", home: "Home",
+                appTitle: "MIX GOLD", gallery: "Gallery", saved: "Saved", settings: "Settings", home: "Home",
                 menu: "Menu", darkMode: "Dark Mode", language: "Language", general: "General",
-                developer: "Developer", galleryTeam: "S-E Team", noSavedImages: "No saved items",
-                models: "Models", noModels: "No models available",
-                relatedPosts: "Related Videos", modelStats: "Videos",
+                developer: "Developer", galleryTeam: "MIX GOLD Team", noSavedImages: "No saved items",
+                models: "Stars", noModels: "No stars available",
+                relatedPosts: "Related Anime", modelStats: "Anime",
                 studios: "Studios", series: "Series", images: "PulseX",
                 showMore: "Show More", showLess: "Show Less",
                 videoCategories: "Video Categories", comicsMenu: "Comics", studioMenu: "Studio & Series",
                 mainMenu: "Main Menu", login: "Login",
                 manga: "Manga", manhwa: "Manhwa", notifications: "Notifications", watchHistory: "Watch History",
                 subscribe: "Subscribe", subscribed: "Subscribed", noNotifications: "No notifications yet",
-                noWatchHistory: "No videos watched yet", clearHistory: "Clear History", seeAll: "See All", videos: "Videos",
+                noWatchHistory: "No videos watched yet", clearHistory: "Clear History", seeAll: "See All", videos: "Anime",
                 account: "Account", logout: "Log Out",
                 profile: "Profile", changePhoto: "Change Photo", saveChanges: "Save Changes", username: "Username",
                 pasteImageUrl: "Paste an image link (imgbb, etc.)", useLink: "Use This Link", cropYourPhoto: "Crop Your Photo",
@@ -4312,7 +4653,7 @@
                 postComment: "Post", loadingComments: "Loading...", loading: "Loading...",
                 chapter: "Chapter", chapters: "Chapters", noChapters: "No chapters yet", author: "Author",
                 status: "Status", ongoing: "Ongoing", completed: "Completed", startReading: "Start Reading",
-                noMangaAvailable: "No manga available yet", nextChapter: "Next Chapter", previousChapter: "Previous Chapter",
+                noMangaAvailable: "No Manga available yet", nextChapter: "Next Chapter", previousChapter: "Previous Chapter",
                 endOfChapter: "End of Chapter",
                 addToFavorite: "Add to Favorite", addedToFavorite: "Added to Favorites", summary: "Summary",
                 availableLanguages: "Available Languages", updateSchedule: "Update Schedule",
@@ -4321,18 +4662,18 @@
                 quality: "Quality", readingMode: "Reading Mode", direction: "Direction", shareLink: "Share Link"
             },
             ar: {
-                appTitle: " دبليو", gallery: "المعرض", saved: "المحفوظات", settings: "الإعدادات", home: "الرئيسية",
+                appTitle: "MIX GOLD", gallery: "المعرض", saved: "المحفوظات", settings: "الإعدادات", home: "الرئيسية",
                 menu: "القائمة", darkMode: "الوضع الداكن", language: "اللغة", general: "عام",
-                developer: "المطور", galleryTeam: "فريق إس-إي-إكس إن إس إف دبليو", noSavedImages: "لا توجد عناصر محفوظة",
-                models: "عارضات", noModels: "لا توجد عارضات",
-                relatedPosts: "فيديوهات ذات صلة", modelStats: "فيديوهات",
+                developer: "المطور", galleryTeam: "فريق MIX GOLD", noSavedImages: "لا توجد عناصر محفوظة",
+                models: "ممثلون", noModels: "لا يوجد ممثلون",
+                relatedPosts: "أنمي ذات صلة", modelStats: "Anime",
                 studios: "استوديوهات", series: "سلاسل", images: "PulseX",
                 showMore: "عرض المزيد", showLess: "عرض أقل",
                 videoCategories: "فئات الفيديو", comicsMenu: "كوميكس", studioMenu: "استوديو وسلاسل",
                 mainMenu: "القائمة الرئيسية", login: "تسجيل الدخول",
-                manga: "مانجا", manhwa: "مانهوا", notifications: "الإشعارات", watchHistory: "سجل المشاهدة",
+                manga: "Manga", manhwa: "مانهوا", notifications: "الإشعارات", watchHistory: "سجل المشاهدة",
                 subscribe: "اشتراك", subscribed: "مُشترك", noNotifications: "لا توجد إشعارات بعد",
-                noWatchHistory: "لم تشاهد أي فيديو بعد", clearHistory: "مسح السجل", seeAll: "عرض الكل", videos: "فيديوهات",
+                noWatchHistory: "لم تشاهد أي فيديو بعد", clearHistory: "مسح السجل", seeAll: "عرض الكل", videos: "Anime",
                 account: "الحساب", logout: "تسجيل الخروج",
                 profile: "الملف الشخصي", changePhoto: "تغيير الصورة", saveChanges: "حفظ التغييرات", username: "اسم المستخدم",
                 pasteImageUrl: "الصق رابط صورة (imgbb وغيره)", useLink: "استخدام هذا الرابط", cropYourPhoto: "قص الصورة",
@@ -4345,7 +4686,7 @@
                 postComment: "نشر", loadingComments: "جارٍ التحميل...", loading: "جارٍ التحميل...",
                 chapter: "الفصل", chapters: "الفصول", noChapters: "لا توجد فصول بعد", author: "المؤلف",
                 status: "الحالة", ongoing: "مستمرة", completed: "مكتملة", startReading: "ابدأ القراءة",
-                noMangaAvailable: "لا توجد مانجا متاحة بعد", nextChapter: "الفصل التالي", previousChapter: "الفصل السابق",
+                noMangaAvailable: "لا يوجد Manga متاح بعد", nextChapter: "الفصل التالي", previousChapter: "الفصل السابق",
                 endOfChapter: "نهاية الفصل",
                 addToFavorite: "أضف للمفضلة", addedToFavorite: "أُضيفت للمفضلة", summary: "الملخص",
                 availableLanguages: "اللغات المتاحة", updateSchedule: "جدول التحديث",
@@ -4433,32 +4774,102 @@
         let cachedHomepageSections = null;
         let cachedNavLocks = null;
 
-        function humanizeDate(iso) {
-            if (!iso) return '';
-            const diffMs = Date.now() - new Date(iso).getTime();
+        function humanizeDate(value) {
+            if (value === null || value === undefined || value === '') return '';
+            const timestamp = typeof value === 'number' ? value : new Date(value).getTime();
+            if (!Number.isFinite(timestamp)) return '';
+
+            const diffMs = Math.max(0, Date.now() - timestamp);
             const mins = Math.floor(diffMs / 60000);
-            if (mins < 1) return 'الآن';
-            if (mins < 60) return `منذ ${mins} دقيقة`;
+            const isArabic = currentLanguage === 'ar';
+            if (mins < 1) return isArabic ? 'الآن' : 'Just now';
+            if (mins < 60) return isArabic ? `منذ ${mins} دقيقة` : `${mins} ${mins === 1 ? 'minute' : 'minutes'} ago`;
             const hours = Math.floor(mins / 60);
-            if (hours < 24) return `منذ ${hours} ساعة`;
+            if (hours < 24) return isArabic ? `منذ ${hours} ساعة` : `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
             const days = Math.floor(hours / 24);
-            if (days < 30) return `منذ ${days} يوم`;
+            if (days < 30) return isArabic ? `منذ ${days} يوم` : `${days} ${days === 1 ? 'day' : 'days'} ago`;
             const months = Math.floor(days / 30);
-            if (months < 12) return `منذ ${months} شهر`;
-            return `منذ ${Math.floor(months / 12)} سنة`;
+            if (months < 12) return isArabic ? `منذ ${months} شهر` : `${months} ${months === 1 ? 'month' : 'months'} ago`;
+            const years = Math.floor(months / 12);
+            return isArabic ? `منذ ${years} سنة` : `${years} ${years === 1 ? 'year' : 'years'} ago`;
+        }
+
+        function getLocalizedDateLabel(item) {
+            return item && item.createdAt ? humanizeDate(item.createdAt) : (item?.date || '');
         }
 
         async function loadDynamicContent() {
             try {
-                const [settingsRes, postsRes, modelsRes] = await Promise.all([
+                const [settingsRes, postsRes, modelsRes, detailsRes, categoriesRes, starsRes, linksRes, mediaRes, metricsRes] = await Promise.all([
                     supabaseClient.from('site_settings').select('key, value'),
                     supabaseClient.from('posts').select('*').order('created_at', { ascending: false }),
                     supabaseClient.from('models').select('*').order('created_at', { ascending: false }),
+                    supabaseClient.from('post_details').select('post_id, summary, studio_name, series_name, duration'),
+                    supabaseClient.from('post_categories').select('post_id, category'),
+                    supabaseClient.from('post_stars').select('post_id, model_id'),
+                    supabaseClient.from('post_links').select('post_id, link_type, url'),
+                    supabaseClient.from('post_media').select('post_id, media_kind, url, sort_order').order('sort_order', { ascending: true }),
+                    supabaseClient.from('post_metrics').select('post_id, views, likes_count, dislikes_count'),
                 ]);
 
                 const { data: settingsRows, error: settingsErr } = settingsRes;
                 const { data: postsRows, error: postsErr } = postsRes;
                 const { data: modelsRows, error: modelsErr } = modelsRes;
+                const relationRowsReady = !detailsRes.error && !categoriesRes.error && !starsRes.error && !linksRes.error && !mediaRes.error && !metricsRes.error;
+                const detailsByPost = new Map((detailsRes.data || []).map(row => [row.post_id, row]));
+                const categoriesByPost = new Map();
+                const starsByPost = new Map();
+                const linksByPost = new Map();
+                const mediaByPost = new Map();
+                const metricsByPost = new Map((metricsRes.data || []).map(row => [row.post_id, row]));
+
+                (categoriesRes.data || []).forEach(row => {
+                    const values = categoriesByPost.get(row.post_id) || [];
+                    values.push(row.category);
+                    categoriesByPost.set(row.post_id, values);
+                });
+                (starsRes.data || []).forEach(row => {
+                    const values = starsByPost.get(row.post_id) || [];
+                    values.push(row.model_id);
+                    starsByPost.set(row.post_id, values);
+                });
+                (linksRes.data || []).forEach(row => {
+                    const values = linksByPost.get(row.post_id) || {};
+                    values[row.link_type] = row.url;
+                    linksByPost.set(row.post_id, values);
+                });
+                (mediaRes.data || []).forEach(row => {
+                    const values = mediaByPost.get(row.post_id) || { thumbnail: '', images: [] };
+                    if (row.media_kind === 'thumbnail') values.thumbnail = row.url;
+                    if (row.media_kind === 'image') values.images.push(row.url);
+                    mediaByPost.set(row.post_id, values);
+                });
+
+                if (!relationRowsReady) {
+                    console.warn('تعذر تحميل علاقات المنشورات الجديدة؛ سيُستخدم التوافق المؤقت مع بيانات المنشور الأساسية.');
+                }
+
+                const getPostRelation = post => {
+                    const legacyCategories = (Array.isArray(post.categories) && post.categories.length)
+                        ? post.categories
+                        : (post.category ? [post.category] : []);
+                    const legacyImages = Array.isArray(post.images) ? post.images : [];
+                    const relationMedia = mediaByPost.get(post.id) || { thumbnail: '', images: [] };
+                    const relationDetails = detailsByPost.get(post.id) || {};
+                    const relationLinks = linksByPost.get(post.id) || {};
+                    const relationMetrics = metricsByPost.get(post.id) || {};
+                    return {
+                        details: relationDetails,
+                        categories: relationRowsReady ? (categoriesByPost.get(post.id) || []) : legacyCategories,
+                        starIds: relationRowsReady ? (starsByPost.get(post.id) || []) : (post.model_id ? [post.model_id] : []),
+                        watchUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.watch || '') : (post.page_url || '')),
+                        downloadUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.download || '') : (post.download_url || post.page_url || '')),
+                        thumbnailUrl: relationRowsReady ? (relationMedia.thumbnail || '') : (post.thumbnail_url || ''),
+                        imageUrls: relationRowsReady && relationMedia.images.length ? relationMedia.images : legacyImages,
+                        views: relationRowsReady ? (relationMetrics.views ?? 0) : (post.views || 0),
+                        likes: relationRowsReady ? (relationMetrics.likes_count ?? 0) : (post.likes || 0)
+                    };
+                };
 
                 if (!settingsErr && settingsRows) {
                     const map = {};
@@ -4477,20 +4888,28 @@
                 }
 
                 if (!postsErr && postsRows && postsRows.length > 0) {
-                    const videoPosts = postsRows.filter(p => p.type === 'video').map(p => ({
-                        id: p.id, name: p.title, title: p.title, url: p.thumbnail_url, pageUrl: p.page_url, downloadUrl: p.download_url || '',
-                        category: p.category, categories: (Array.isArray(p.categories) && p.categories.length) ? p.categories : (p.category ? [p.category] : []),
-                        date: humanizeDate(p.created_at), duration: p.duration || '0:00',
+                    const videoPosts = postsRows.filter(p => p.type === 'video').map(p => {
+                        const relation = getPostRelation(p);
+                        return {
+                        id: p.id, name: p.title, title: p.title, url: relation.thumbnailUrl, pageUrl: relation.watchUrl, downloadUrl: relation.downloadUrl,
+                        category: relation.categories[0] || '', categories: relation.categories,
+                        date: humanizeDate(p.created_at), createdAt: p.created_at, duration: relation.details.duration || p.duration || '0:00',
                         likesPercentage: p.likes_percentage || '0%', views: p.views || 0,
-                        studio: p.studio || '', series: p.series || '', model_id: p.model_id || null
-                    }));
+                        description: typeof relation.details.summary === 'string' ? relation.details.summary : (typeof p.description === 'string' ? p.description : ''),
+                        studio: relation.details.studio_name || p.studio || '', series: relation.details.series_name || p.series || '',
+                        model_id: relation.starIds[0] || null, model_ids: relation.starIds, views: relation.views, likes: relation.likes
+                    };
+                    });
                     if (videoPosts.length) characterData = videoPosts;
 
-                    const imagePosts = postsRows.filter(p => p.type === 'image').map(p => ({
-                        name: p.title, url: p.id, images: (p.images && p.images.length ? p.images : [p.thumbnail_url]),
-                        date: humanizeDate(p.created_at), views: p.views || 0, likes: 0,
-                        desc: p.description || '', tags: p.tags || []
-                    }));
+                    const imagePosts = postsRows.filter(p => p.type === 'image').map(p => {
+                        const relation = getPostRelation(p);
+                        return {
+                            name: p.title, url: p.id, images: relation.imageUrls.length ? relation.imageUrls : [relation.thumbnailUrl],
+                            date: humanizeDate(p.created_at), createdAt: p.created_at, views: relation.views, likes: 0,
+                            desc: relation.details.summary || p.description || '', tags: p.tags || []
+                        };
+                    });
                     if (imagePosts.length) pureImagesData = imagePosts;
 
                     // Manga posts store their chapter list inside the generic `images`
@@ -4498,6 +4917,7 @@
                     // for type:'manga' each entry is a chapter object instead:
                     // { number, title, pages: [...], date }. This needs no schema change.
                     const mangaPosts = postsRows.filter(p => p.type === 'manga').map(p => {
+                        const relation = getPostRelation(p);
                         const rawChapters = Array.isArray(p.images) ? p.images : [];
                         const chapters = rawChapters
                             .map((c, idx) => ({
@@ -4510,15 +4930,14 @@
                             .sort((a, b) => a.number - b.number);
                         return {
                             id: p.id, url: p.id, name: p.title, title: p.title,
-                            cover: p.thumbnail_url, thumbnail_url: p.thumbnail_url,
-                            author: p.studio || '', status: p.series || '',
-                            genre: p.category || '',
-                            genres: (Array.isArray(p.categories) && p.categories.length) ? p.categories : (p.category ? [p.category] : []),
-                            description: p.description || '', tags: p.tags || [],
+                            cover: relation.thumbnailUrl, thumbnail_url: relation.thumbnailUrl,
+                            author: relation.details.studio_name || p.studio || '', status: relation.details.series_name || p.series || '',
+                            genre: relation.categories[0] || '', genres: relation.categories,
+                            description: relation.details.summary || p.description || '', tags: p.tags || [],
                             // No dedicated columns yet for these — default to a sensible single-language,
                             // no-schedule state until the dashboard exposes real fields for them.
                             languages: [{ code: 'en', label: 'English' }], schedule: '', simulrelease: false,
-                            chapters, views: p.views || 0, date: humanizeDate(p.created_at)
+                            chapters, views: relation.views, date: humanizeDate(p.created_at), createdAt: p.created_at
                         };
                     });
                     if (mangaPosts.length) allMangaData = mangaPosts;
@@ -4527,15 +4946,18 @@
                     // video form) — those are the "related posts" shown on a model's page.
                     // (There's no separate type:'model' post — the dashboard only ever
                     // creates those in the `models` table, handled below.)
-                    const modelPostEntries = postsRows.filter(p => p.type === 'video' && p.model_id);
+                    const modelPostEntries = postsRows.filter(p => p.type === 'video' && getPostRelation(p).starIds.length);
                     if (modelPostEntries.length) {
                         modelPostsData = {};
                         modelPostEntries.forEach(p => {
+                            const relation = getPostRelation(p);
                             modelPostsData[p.id] = {
-                                id: p.id, name: p.title, url: p.thumbnail_url, pageUrl: p.page_url, downloadUrl: p.download_url || '', category: 'model_post',
-                                date: humanizeDate(p.created_at), duration: p.duration || '0:00',
-                                likesPercentage: p.likes_percentage || '0%', views: p.views || 0,
-                                title: p.title, studio: p.studio || '', series: p.series || ''
+                                id: p.id, name: p.title, url: relation.thumbnailUrl, pageUrl: relation.watchUrl, downloadUrl: relation.downloadUrl, category: 'model_post',
+                                date: humanizeDate(p.created_at), createdAt: p.created_at, duration: relation.details.duration || p.duration || '0:00',
+                                likesPercentage: p.likes_percentage || '0%', views: relation.views,
+                                title: p.title, description: relation.details.summary || p.description || '',
+                                studio: relation.details.studio_name || p.studio || '', series: relation.details.series_name || p.series || '',
+                                model_id: relation.starIds[0] || null, model_ids: relation.starIds
                             };
                         });
                     }
@@ -4550,7 +4972,7 @@
                     if (modelsRows.length > 0) {
                         modelsData = modelsRows.map(m => ({
                             id: m.id, name: m.name, url: m.thumbnail_url, category: m.category || 'model',
-                            posts: (postsRows || []).filter(p => p.type === 'video' && p.model_id === m.id).map(p => p.id),
+                            posts: (postsRows || []).filter(p => p.type === 'video' && getPostRelation(p).starIds.includes(m.id)).map(p => p.id),
                             subs: m.subs || '0', likes: m.likes || '0'
                         }));
                     } else {
@@ -4590,10 +5012,7 @@
         let mangaReaderDirection = localStorage.getItem('mangaReaderDirection') || 'ltr';
         let followedManga = JSON.parse(localStorage.getItem('mangaFollows')) || [];
 
-        const ADSTERRA_KEY = 'YOUR_ADSTERRA_ZONE_KEY_HERE';
-        const ADSTERRA_WIDTH = 300;
-        const ADSTERRA_HEIGHT = 250;
-        const AD_FREQUENCY = 3;
+        const ADSTERRA_SOCIAL_BAR_SRC = 'https://pl30915606.effectivecpmnetwork.com/8f/d0/9a/8fd09a90e1362ca968d08563dbdcfb69.js';
 
 
         let isLoggedIn = false;
@@ -4611,11 +5030,194 @@
         let currentWatchLogged = false;
         let watchTimer = null;
 
+        function isBlockedPlayerUrl(value) {
+            const rawValue = typeof value === 'string' ? value.trim() : '';
+            if (!rawValue) return false;
+            try {
+                const hostname = new URL(rawValue).hostname.toLowerCase().replace(/^www\./, '');
+                return hostname === ('you' + 'tube.com') || hostname.endsWith('.' + 'you' + 'tube.com') || hostname === ('youtu' + '.be');
+            } catch (error) {
+                return true;
+            }
+        }
+
+        function getSafePlayerUrl(value) {
+            const rawValue = typeof value === 'string' ? value.trim() : '';
+            if (!/^https?:\/\//i.test(rawValue) || isBlockedPlayerUrl(rawValue)) return '';
+            return rawValue;
+        }
+
+        function clearPostPlayer() {
+            const playerIframe = document.getElementById('post-player-iframe');
+            if (playerIframe) playerIframe.src = 'about:blank';
+        }
+
+        function setPostPlayerSource(value) {
+            const playerIframe = document.getElementById('post-player-iframe');
+            if (!playerIframe) return;
+            playerIframe.src = getSafePlayerUrl(value) || 'about:blank';
+        }
+
         const SUPABASE_URL = 'https://sqfvrowywszlcmgfkzgc.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxZnZyb3d5d3N6bGNtZ2ZremdjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM0NTI4NjgsImV4cCI6MjA5OTAyODg2OH0.e4i3wBOV3T42irXTRhpKr9cwjqtusYj_NHXkZpMBi5Q';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const IMGBB_API_KEY = '9c278ac3013335bd9fbf2d01390496a5';
+        // MIX GOLD navigation rule: keep a signed-in user logged in when moving to an independent Vercel page.
+        // The temporary token payload stays in the URL fragment only, never in the request or server logs.
+        const MIX_GOLD_AUTH_FRAGMENT_KEY = 'mixgold_auth';
+        const MIX_GOLD_STANDALONE_PAGES = Object.freeze({
+            home: 'https://mix-goldd.vercel.app/',
+            videos: 'https://mix-goldd-anime.vercel.app/',
+            manga: 'https://mix-goldd-manga.vercel.app/',
+            manhwa: 'https://mix-goldd-manhwa.vercel.app/',
+            models: 'https://mix-goldd-stars.vercel.app/',
+            images: 'https://mix-goldd-images.vercel.app/',
+            studios: 'https://mix-goldd-studios.vercel.app/',
+            series: 'https://mix-goldd-series.vercel.app/',
+            saved: 'https://mix-goldd-saved.vercel.app/',
+            notifications: 'https://mix-goldd-notifications.vercel.app/',
+            'watch-history': 'https://mix-goldd-watch-history.vercel.app/',
+            settings: 'https://mix-goldd-settings.vercel.app/',
+            profile: 'https://mix-goldd-profile.vercel.app/',
+            login: 'https://mix-goldd-login.vercel.app/'
+        });
+
+        function encodeAuthTransfer(session) {
+            try {
+                return btoa(unescape(encodeURIComponent(JSON.stringify({
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token
+                }))));
+            } catch (error) {
+                console.warn('تعذر تجهيز جلسة الدخول للانتقال:', error);
+                return null;
+            }
+        }
+
+        function decodeAuthTransfer(encodedSession) {
+            try {
+                return JSON.parse(decodeURIComponent(escape(atob(encodedSession))));
+            } catch (error) {
+                console.warn('تعذر قراءة جلسة الدخول المنقولة:', error);
+                return null;
+            }
+        }
+
+	        let navigationSession = null;
+	        const MIX_GOLD_AGREEMENT_FRAGMENT_KEY = 'mixgold_agreement';
+	        const MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY = 'mixgold_socialbar';
+	        const MIX_GOLD_SOCIAL_BAR_SESSION_KEY = 'mixgold_social_bar_seen_v1';
+
+        function getActiveAgreementTimestamp() {
+            const savedTime = localStorage.getItem('agreedToTerms');
+            const agreedTimestamp = Number.parseInt(savedTime || '', 10);
+            const twelveHours = 12 * 60 * 60 * 1000;
+            if (!Number.isFinite(agreedTimestamp) || Date.now() - agreedTimestamp > twelveHours) {
+                if (savedTime) localStorage.removeItem('agreedToTerms');
+                return null;
+            }
+            return agreedTimestamp;
+        }
+
+	        function restoreTransferredAgreement(params) {
+	            const transferredTime = Number.parseInt(params.get(MIX_GOLD_AGREEMENT_FRAGMENT_KEY) || '', 10);
+	            const twelveHours = 12 * 60 * 60 * 1000;
+	            if (Number.isFinite(transferredTime) && Date.now() - transferredTime <= twelveHours) {
+	                localStorage.setItem('agreedToTerms', transferredTime.toString());
+	            }
+	        }
+
+	        function hasSeenSocialBarInVisit() {
+	            try {
+	                return sessionStorage.getItem(MIX_GOLD_SOCIAL_BAR_SESSION_KEY) === '1';
+	            } catch (error) {
+	                return false;
+	            }
+	        }
+
+	        function markSocialBarSeenInVisit() {
+	            try {
+	                sessionStorage.setItem(MIX_GOLD_SOCIAL_BAR_SESSION_KEY, '1');
+	            } catch (error) {
+	                // إذا منع المتصفح التخزين، يمنع وجود الوسم نفسه التكرار على مستوى الصفحة.
+	            }
+	        }
+
+	        function restoreTransferredSocialBar(params) {
+	            if (params.get(MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY) === '1') markSocialBarSeenInVisit();
+	        }
+
+        function cacheNavigationSession(session) {
+            navigationSession = session?.access_token && session?.refresh_token ? session : null;
+            return navigationSession;
+        }
+
+        function openStandaloneWithSession(destinationUrl, destinationLabel) {
+            const target = new URL(destinationUrl, window.location.href);
+            if (target.origin === window.location.origin) {
+                window.location.assign(target.toString());
+                return;
+            }
+            const transferParams = new URLSearchParams();
+            const session = navigationSession;
+            if (session) {
+                const encodedSession = encodeAuthTransfer(session);
+                if (encodedSession) {
+                    transferParams.set(MIX_GOLD_AUTH_FRAGMENT_KEY, encodedSession);
+                } else {
+                    console.warn(`تعذر تجهيز جلسة الدخول للانتقال إلى ${destinationLabel}.`);
+                }
+            }
+	            const agreementTimestamp = getActiveAgreementTimestamp();
+	            if (agreementTimestamp) transferParams.set(MIX_GOLD_AGREEMENT_FRAGMENT_KEY, agreementTimestamp.toString());
+	            if (hasSeenSocialBarInVisit()) transferParams.set(MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY, '1');
+	            if (transferParams.size) target.hash = transferParams.toString();
+            window.location.assign(target.toString());
+        }
+
+        function openSavedStandalone() {
+            openStandalonePage('saved');
+        }
+
+        function openHomeStandalone() {
+            openStandalonePage('home');
+        }
+
+        function openStandalonePage(page) {
+            const destinationUrl = MIX_GOLD_STANDALONE_PAGES[page];
+            if (!destinationUrl) {
+                navigateTo(page);
+                return;
+            }
+            openStandaloneWithSession(destinationUrl, getPageTitle(page) || page);
+        }
+
+	        async function restoreTransferredAuthSession() {
+	            const params = new URLSearchParams(window.location.hash.slice(1));
+	            restoreTransferredAgreement(params);
+	            restoreTransferredSocialBar(params);
+	            const encodedSession = params.get(MIX_GOLD_AUTH_FRAGMENT_KEY);
+	            if (!encodedSession) {
+	                if (params.has(MIX_GOLD_AGREEMENT_FRAGMENT_KEY) || params.has(MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY)) {
+	                    history.replaceState(null, document.title, window.location.pathname + window.location.search);
+	                }
+                return;
+            }
+
+            try {
+                const session = decodeAuthTransfer(encodedSession);
+                if (!session?.access_token || !session?.refresh_token) return;
+                const { error } = await supabaseClient.auth.setSession(session);
+                if (error) console.warn('تعذر استعادة جلسة الدخول المنقولة:', error);
+                else cacheNavigationSession(session);
+            } catch (error) {
+                console.warn('تعذر استعادة جلسة الدخول المنقولة:', error);
+            } finally {
+                history.replaceState(null, document.title, window.location.pathname + window.location.search);
+            }
+        }
+
+        const IMGBB_API_KEY = '1bb2dbe6951525e0b0256e8c79397f41';
 
         async function trackPostView(postId) {
             try {
@@ -4885,16 +5487,7 @@
         }
 
         function checkAgreement() {
-            const savedTime = localStorage.getItem('agreedToTerms');
-            if (!savedTime) {
-                document.getElementById('agreement-overlay').classList.add('active');
-                return;
-            }
-            const agreedTimestamp = parseInt(savedTime, 10);
-            const now = Date.now();
-            const twelveHours = 12 * 60 * 60 * 1000;
-            if (now - agreedTimestamp > twelveHours) {
-                localStorage.removeItem('agreedToTerms');
+            if (!getActiveAgreementTimestamp()) {
                 document.getElementById('agreement-overlay').classList.add('active');
             }
         }
@@ -4902,6 +5495,7 @@
         function acceptAgreement() {
             localStorage.setItem('agreedToTerms', Date.now().toString());
             document.getElementById('agreement-overlay').classList.remove('active');
+            loadSocialBarOnce();
         }
 
         function declineAgreement() {
@@ -4912,6 +5506,7 @@
             setTimeout(() => {
                 document.getElementById('preloader').classList.add('hidden');
                 checkAgreement();
+                if (getActiveAgreementTimestamp()) loadSocialBarOnce();
             }, 600);
         });
 
@@ -4958,13 +5553,16 @@
             updateAuthUI();
         }
 
-        async function checkUserSession() {
+        async function checkUserSession(options = {}) {
+            if (!options.skipTransfer) await restoreTransferredAuthSession();
             const { data: { session } } = await supabaseClient.auth.getSession();
+            cacheNavigationSession(session);
             setLoggedIn(!!session);
             if (session) {
                 await fetchUserData();
                 resumePendingAuthAction();
             }
+            return session;
         }
 
         function cacheUserProfile(profile) {
@@ -5181,15 +5779,84 @@
             await completeAuthSuccess();
         }
 
-        async function modalLoginWithGoogle() {
-            persistPendingAuthForRedirect();
+        const GOOGLE_WEB_CLIENT_ID = '162387244484-4u97bc2fnab7l3q79g1fouqntjirk69j.apps.googleusercontent.com';
+        let googleIdentityInitialized = false;
+        let googleIdentityLoadPromise = null;
+
+        function getGoogleIdentityServices() {
+            if (window.google?.accounts?.id) return Promise.resolve(window.google.accounts.id);
+            if (googleIdentityLoadPromise) return googleIdentityLoadPromise;
+
+            googleIdentityLoadPromise = new Promise((resolve, reject) => {
+                const existingScript = document.querySelector('script[src^="https://accounts.google.com/gsi/client"]');
+                const script = existingScript || document.createElement('script');
+                const finishLoading = () => window.google?.accounts?.id
+                    ? resolve(window.google.accounts.id)
+                    : reject(new Error('تعذر تهيئة خدمة تسجيل الدخول من Google.'));
+
+                script.addEventListener('load', finishLoading, { once: true });
+                script.addEventListener('error', () => reject(new Error('تعذر تحميل خدمة تسجيل الدخول من Google.')), { once: true });
+                if (!existingScript) {
+                    script.src = 'https://accounts.google.com/gsi/client';
+                    script.async = true;
+                    script.defer = true;
+                    document.head.appendChild(script);
+                }
+                window.setTimeout(finishLoading, 4000);
+            });
+            return googleIdentityLoadPromise;
+        }
+
+        async function handleGoogleCredential(response) {
+            if (!response?.credential) {
+                alert('لم ترسل Google بيانات تسجيل الدخول. حاول مرة أخرى.');
+                return;
+            }
+            const { error } = await supabaseClient.auth.signInWithIdToken({
+                provider: 'google',
+                token: response.credential
+            });
+            if (error) {
+                alert('خطأ في تسجيل الدخول بجوجل: ' + error.message);
+                return;
+            }
+            await completeAuthSuccess();
+        }
+
+        async function continueWithGoogleOAuthRedirect() {
             const { error } = await supabaseClient.auth.signInWithOAuth({
                 provider: 'google',
                 options: { redirectTo: window.location.origin }
             });
-            if (error) {
-                alert('خطأ في تسجيل الدخول بجوجل: ' + error.message);
+            if (error) alert('خطأ في تسجيل الدخول بجوجل: ' + error.message);
+        }
+
+        async function loginWithGoogleOnDevice() {
+            persistPendingAuthForRedirect();
+            try {
+                const identity = await getGoogleIdentityServices();
+                if (!googleIdentityInitialized) {
+                    identity.initialize({
+                        client_id: GOOGLE_WEB_CLIENT_ID,
+                        callback: handleGoogleCredential,
+                        auto_select: false,
+                        use_fedcm_for_prompt: true
+                    });
+                    googleIdentityInitialized = true;
+                }
+                identity.prompt((notification) => {
+                    if (notification.isNotDisplayed?.() || notification.isSkippedMoment?.()) {
+                        continueWithGoogleOAuthRedirect();
+                    }
+                });
+            } catch (error) {
+                console.warn('Google Identity Services unavailable; using the redirect fallback.', error);
+                await continueWithGoogleOAuthRedirect();
             }
+        }
+
+        async function modalLoginWithGoogle() {
+            await loginWithGoogleOnDevice();
         }
 
         async function modalRegisterUser() {
@@ -5235,7 +5902,7 @@
         function updateAccountIcon() {
             const btn = document.querySelector('.sidebar-login-icon');
             if (!btn) return;
-            btn.onclick = () => navigateTo(isLoggedIn ? 'profile' : 'login');
+            btn.onclick = () => openStandalonePage(isLoggedIn ? 'profile' : 'login');
             if (isLoggedIn && currentUserProfile?.avatarUrl) {
                 btn.innerHTML = `<img src="${currentUserProfile.avatarUrl}" alt="Profile" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
             } else {
@@ -5405,14 +6072,7 @@
         }
 
         function timeAgo(timestamp) {
-            const diff = Math.max(0, Date.now() - timestamp);
-            const mins = Math.floor(diff / 60000);
-            if (mins < 1) return 'Just now';
-            if (mins < 60) return mins + 'm ago';
-            const hours = Math.floor(mins / 60);
-            if (hours < 24) return hours + 'h ago';
-            const days = Math.floor(hours / 24);
-            return days + 'd ago';
+            return humanizeDate(timestamp);
         }
 
         async function fetchNotifications() {
@@ -5582,7 +6242,7 @@
         function performSearch() {
             currentSearchTerm = document.getElementById('search-input').value.trim();
             toggleSearch();
-            navigateTo(currentPage);
+            navigateTo(currentPage, { historyMode: 'none' });
         }
 
         function resetSearchFilters() {
@@ -5591,13 +6251,14 @@
             setFilterType('videos');
             document.getElementById('spelling-correction-container').style.display = 'none';
             document.getElementById('search-modal').classList.remove('active');
-            navigateTo(currentPage);
+            navigateTo(currentPage, { historyMode: 'none' });
         }
 
         function setFilterType(type) {
             currentFilterType = type;
             const trigger = document.querySelector('#filter-type-select .sort-trigger span');
-            if (trigger) trigger.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            const filterLabels = { videos: 'Anime', images: 'PulseX', models: 'Stars', manga: 'Manga', manhwa: 'Manhwa' };
+            if (trigger) trigger.textContent = filterLabels[type] || type.charAt(0).toUpperCase() + type.slice(1);
             document.querySelectorAll('#filter-type-select .sort-option').forEach(opt => {
                 opt.classList.toggle('active', opt.dataset.value === type);
             });
@@ -5797,19 +6458,36 @@
             return 0;
         }
 
+        function parseAnimeSortMetric(value) {
+            if (typeof value === 'number' && Number.isFinite(value)) return value;
+            const matched = String(value ?? '').trim().replace(/,/g, '').toUpperCase()
+                .match(/^(-?\d+(?:\.\d+)?)\s*([KMB])?$/);
+            if (!matched) return 0;
+            const multipliers = { K: 1_000, M: 1_000_000, B: 1_000_000_000 };
+            return Number(matched[1]) * (multipliers[matched[2]] || 1);
+        }
+
+        function getAnimeAddedAt(item) {
+            const timestamp = new Date(item?.createdAt || item?.created_at || 0).getTime();
+            return Number.isFinite(timestamp) ? timestamp : 0;
+        }
+
+        function getAnimeRatingScore(item) {
+            const likes = parseAnimeSortMetric(item?.likes ?? item?.likesCount ?? item?.likes_count);
+            return likes > 0 ? likes : parseAnimeSortMetric(item?.likesPercentage);
+        }
+
         function advancedSortVideos(videosArray, sortType) {
             const sorted = [...videosArray];
             switch(sortType) {
                 case 'latest':
-                    return sorted;
+                    return sorted.sort((a, b) => getAnimeAddedAt(b) - getAnimeAddedAt(a));
+                case 'title':
+                    return sorted.sort((a, b) => (a.title || a.name || '').localeCompare(b.title || b.name || ''));
                 case 'most_viewed':
-                    return sorted.sort((a, b) => b.views - a.views);
+                    return sorted.sort((a, b) => parseAnimeSortMetric(b.views) - parseAnimeSortMetric(a.views));
                 case 'top_rated':
-                    return sorted.sort((a, b) => {
-                        const aRate = parseFloat(a.likesPercentage) || 0;
-                        const bRate = parseFloat(b.likesPercentage) || 0;
-                        return bRate - aRate;
-                    });
+                    return sorted.sort((a, b) => getAnimeRatingScore(b) - getAnimeRatingScore(a));
                 case 'longest':
                     return sorted.sort((a, b) => {
                         return parseDurationToSeconds(b.duration) - parseDurationToSeconds(a.duration);
@@ -5828,12 +6506,9 @@
         }
 
         const VIDEO_SORT_OPTIONS = [
-            { value: 'latest', label: 'Latest' },
-            { value: 'most_viewed', label: 'Most Viewed' },
-            { value: 'top_rated', label: 'Top Rated' },
-            { value: 'longest', label: 'Longest' },
-            { value: 'most_favorited', label: 'Most Favorited' },
-            { value: 'random', label: 'Random Videos' }
+            { value: 'latest', label: 'Latest Addition', labelAr: 'آخر إضافة' },
+            { value: 'most_viewed', label: 'Most Viewed', labelAr: 'الأكثر مشاهدة' },
+            { value: 'top_rated', label: 'Top Rated', labelAr: 'الأكثر تقييمًا' }
         ];
 
         const MODEL_SORT_OPTIONS = [
@@ -5846,9 +6521,10 @@
             const existing = document.getElementById(containerId);
             if (existing) existing.remove();
 
+            const getOptionLabel = (option) => currentLanguage === 'ar' ? (option.labelAr || option.label) : option.label;
             const getLabel = (value) => {
                 const found = options.find(o => o.value === value);
-                return found ? found.label : (options[0] ? options[0].label : '');
+                return found ? getOptionLabel(found) : (options[0] ? getOptionLabel(options[0]) : '');
             };
 
             const wrapper = document.createElement('div');
@@ -5866,11 +6542,11 @@
                 const optDiv = document.createElement('div');
                 optDiv.className = 'sort-option';
                 if (opt.value === currentValue) optDiv.classList.add('active');
-                optDiv.textContent = opt.label;
+                optDiv.textContent = getOptionLabel(opt);
                 optDiv.addEventListener('click', () => {
                     dropdown.classList.remove('show');
                     trigger.classList.remove('open');
-                    trigger.querySelector('span').textContent = opt.label;
+                    trigger.querySelector('span').textContent = getOptionLabel(opt);
                     if (onChangeCallback) onChangeCallback(opt.value);
                 });
                 dropdown.appendChild(optDiv);
@@ -5977,16 +6653,95 @@
                 logo.style.display = 'block';
                 titleEl.style.display = 'none';
                 titleEl.textContent = '';
+                titleEl.style.removeProperty('--header-page-title-font-size');
+                titleEl.style.removeProperty('--header-page-title-max-width');
             } else {
                 logo.style.display = 'none';
                 titleEl.style.display = 'block';
-                titleEl.textContent = customTitle || getPageTitle(page);
+                const headerTitle = customTitle || getPageTitle(page);
+                const episodeMatch = String(headerTitle).trim().match(/^(.*?)(?:\s+)((?:الحلقة|حلقة)\s+\d+|(?:episode|ep\.)\s+\d+)$/i);
+                titleEl.replaceChildren();
+                if (episodeMatch) {
+                    const workSpan = document.createElement('span');
+                    workSpan.className = 'header-title-work';
+                    workSpan.textContent = episodeMatch[1].trim();
+                    const episodeSpan = document.createElement('span');
+                    episodeSpan.className = 'header-title-episode';
+                    episodeSpan.dir = /[\u0600-\u06FF]/.test(episodeMatch[2]) ? 'rtl' : 'ltr';
+                    episodeSpan.textContent = episodeMatch[2];
+                    titleEl.append(workSpan, document.createTextNode(' '), episodeSpan);
+                } else {
+                    titleEl.textContent = headerTitle;
+                }
+                fitHeaderPageTitle();
+                requestAnimationFrame(() => requestAnimationFrame(fitHeaderPageTitle));
             }
         }
 
-        function navigateTo(page) {
-            clearRouteParams();
+        function fitHeaderPageTitle() {
+            const titleEl = document.getElementById('header-page-title');
+            const header = titleEl?.closest('header');
+            if (!titleEl || !header || !titleEl.textContent.trim()) return;
+
+            titleEl.style.removeProperty('--header-page-title-font-size');
+            const isCompactScreen = window.matchMedia('(max-width: 480px)').matches;
+            const baseFontSize = isCompactScreen
+                ? 15
+                : (parseFloat(window.getComputedStyle(titleEl).fontSize) || 17.6);
+            const menuWidth = header.querySelector('.menu-toggle')?.offsetWidth || 0;
+            const searchWidth = header.querySelector('.header-controls')?.offsetWidth || 0;
+            const controlGap = isCompactScreen ? 12 : 44;
+            const availableWidth = Math.max(120, header.clientWidth - menuWidth - searchWidth - controlGap);
+
+            titleEl.style.setProperty('--header-page-title-max-width', 'none');
+            const naturalWidth = titleEl.scrollWidth;
+            const minimumFontSize = isCompactScreen ? 13 : 13;
+            const fittedFontSize = isCompactScreen
+                ? naturalWidth > availableWidth
+                    ? Math.max(minimumFontSize, Math.round((baseFontSize * availableWidth / naturalWidth) * 10) / 10)
+                    : baseFontSize
+                : naturalWidth > availableWidth
+                ? Math.max(minimumFontSize, Math.round((baseFontSize * availableWidth / naturalWidth) * 10) / 10)
+                : baseFontSize;
+
+            titleEl.style.setProperty('--header-page-title-max-width', `${Math.floor(availableWidth)}px`);
+            titleEl.style.setProperty('--header-page-title-font-size', `${fittedFontSize}px`);
+            titleEl.classList.toggle('header-title-fitted', fittedFontSize < baseFontSize);
+        }
+
+        window.addEventListener('resize', fitHeaderPageTitle);
+
+        function pageHistoryPath(page) {
+            return page === 'home' ? '/' : `/?page=${encodeURIComponent(page)}`;
+        }
+
+        function syncPageHistory(page, historyMode = 'push') {
+            if (historyMode === 'none' || !MIX_GOLD_PAGES.includes(page)) return;
+            const nextPath = pageHistoryPath(page);
+            const nextState = { ...(history.state || {}), mixGold: true, view: 'page', page };
+            const currentPath = location.pathname + location.search;
+            if (historyMode === 'replace' || currentPath === nextPath) {
+                history.replaceState(nextState, '', nextPath);
+            } else {
+                history.pushState(nextState, '', nextPath);
+            }
+        }
+
+        function returnToPreviousView(fallbackPage = 'home') {
+            if (history.state?.mixGold && history.length > 1) {
+                history.back();
+                return;
+            }
+            navigateTo(fallbackPage, { historyMode: 'replace' });
+        }
+
+        function navigateTo(page, options = {}) {
+            const historyMode = options.historyMode || 'push';
+            syncPageHistory(page, historyMode);
+            if (historyMode === 'none') clearRouteParams();
+            clearPostPlayer();
             document.getElementById('post-detail').classList.remove('active');
+            document.getElementById('post-not-found').classList.remove('active');
             document.getElementById('model-detail').classList.remove('active');
             document.getElementById('image-detail-view').classList.remove('active');
             document.getElementById('login-view').classList.remove('active');
@@ -6068,7 +6823,7 @@
 
             let html = `
                 <div class="menu-section">
-                    <a class="menu-item${navLockClass('home')}" onclick="${navClickHandler('home', "navigateTo('home')")}">
+                    <a class="menu-item${navLockClass('home')}" data-page="home" href="https://mix-goldd.vercel.app/" onclick="event.preventDefault(); if (isNavLocked('home')) { showLockedNotice('home'); } else { openHomeStandalone(); }">
                         <div class="menu-icon"><i class="fas fa-home"></i></div>
                         <div class="menu-text">${t('home')}</div>
                         ${navLockIcon('home')}
@@ -6094,10 +6849,10 @@
                             <i class="fas fa-chevron-down dropdown-arrow"></i>
                         </div>
                         <div class="dropdown-content" id="studio-categories">
-                            <a class="menu-item sub-item" data-page="studios" onclick="navigateTo('studios')">
+                            <a class="menu-item sub-item" data-page="studios" href="https://mix-goldd-studios.vercel.app/" onclick="event.preventDefault(); openStandalonePage('studios')">
                                 <div class="menu-text">${t('studios')}</div>
                             </a>
-                            <a class="menu-item sub-item" data-page="series" onclick="navigateTo('series')">
+                            <a class="menu-item sub-item" data-page="series" href="https://mix-goldd-series.vercel.app/" onclick="event.preventDefault(); openStandalonePage('series')">
                                 <div class="menu-text">${t('series')}</div>
                             </a>`;
             if (grouped.studio.length > 0) {
@@ -6112,12 +6867,12 @@
             html += `
                         </div>
                     </div>
-                    <a class="menu-item${navLockClass('models')}" onclick="${navClickHandler('models', "navigateTo('models')")}">
+                    <a class="menu-item${navLockClass('models')}" data-page="models" href="https://mix-goldd-stars.vercel.app/" onclick="event.preventDefault(); ${navClickHandler('models', "openStandalonePage('models')")}">
                         <div class="menu-icon"><i class="fas fa-star"></i></div>
                         <div class="menu-text">${t('models')}</div>
                         ${navLockIcon('models')}
                     </a>
-                    <a class="menu-item${navLockClass('pulsex')}" onclick="${navClickHandler('pulsex', "navigateTo('images')")}">
+                    <a class="menu-item${navLockClass('pulsex')}" data-page="images" href="https://mix-goldd-images.vercel.app/" onclick="event.preventDefault(); ${navClickHandler('pulsex', "openStandalonePage('images')")}">
                         <div class="menu-icon"><i class="fas fa-images"></i></div>
                         <div class="menu-text">PulseX</div>
                         ${navLockIcon('pulsex')}
@@ -6126,14 +6881,16 @@
                         <div class="menu-item dropdown-toggle${navLockClass('comics')}" onclick="${navClickHandler('comics', 'toggleComicsMenu()')}">
                             <div class="menu-icon"><i class="fas fa-book"></i></div>
                             <div class="menu-text">${t('comicsMenu')}</div>
-                            ${navLockIcon('comics')}
-                            <i class="fas fa-chevron-down dropdown-arrow"></i>
+                            <div class="comics-dropdown-controls">
+                                <i class="fas fa-chevron-down dropdown-arrow"></i>
+                                ${navLockIcon('comics')}
+                            </div>
                         </div>
                         <div class="dropdown-content" id="comics-categories">
-                            <a class="menu-item sub-item" data-page="manga" onclick="navigateTo('manga')">
+                            <a class="menu-item sub-item" data-page="manga" href="https://mix-goldd-manga.vercel.app/" onclick="event.preventDefault(); openStandalonePage('manga')">
                                 <div class="menu-text">Manga</div>
                             </a>
-                            <a class="menu-item sub-item" data-page="manhwa" onclick="navigateTo('manhwa')">
+                            <a class="menu-item sub-item" data-page="manhwa" href="https://mix-goldd-manhwa.vercel.app/" onclick="event.preventDefault(); openStandalonePage('manhwa')">
                                 <div class="menu-text">Manhwa</div>
                             </a>`;
             if (grouped.comics.length > 0) {
@@ -6148,20 +6905,20 @@
             html += `
                         </div>
                     </div>
-                    <a class="menu-item${navLockClass('saved')}" onclick="${navClickHandler('saved', "navigateTo('saved')")}">
+                    <a class="menu-item${navLockClass('saved')}" data-page="saved" href="https://mix-goldd-saved.vercel.app/" onclick="event.preventDefault(); if (isNavLocked('saved')) { showLockedNotice('saved'); } else { openSavedStandalone(); }">
                         <div class="menu-icon"><i class="fas fa-bookmark"></i></div>
                         <div class="menu-text">${t('saved')}</div>
                         ${navLockIcon('saved')}
                     </a>`;
             if (isLoggedIn === true) {
                 html += `
-                    <a class="menu-item${navLockClass('notifications')}" onclick="${navClickHandler('notifications', "navigateTo('notifications')")}">
+                    <a class="menu-item${navLockClass('notifications')}" data-page="notifications" href="https://mix-goldd-notifications.vercel.app/" onclick="event.preventDefault(); ${navClickHandler('notifications', "openStandalonePage('notifications')")}">
                         <div class="menu-icon"><i class="fas fa-bell"></i></div>
                         <div class="menu-text">${t('notifications')}</div>
                         ${navLockIcon('notifications')}
                         <span class="sidebar-notif-badge" id="sidebar-notif-badge">0</span>
                     </a>
-                    <a class="menu-item${navLockClass('watch-history')}" onclick="${navClickHandler('watch-history', "navigateTo('watch-history')")}">
+                    <a class="menu-item${navLockClass('watch-history')}" data-page="watch-history" href="https://mix-goldd-watch-history.vercel.app/" onclick="event.preventDefault(); ${navClickHandler('watch-history', "openStandalonePage('watch-history')")}">
                         <div class="menu-icon"><i class="fas fa-clock-rotate-left"></i></div>
                         <div class="menu-text">${t('watchHistory')}</div>
                         ${navLockIcon('watch-history')}
@@ -6187,16 +6944,19 @@
                 </div>
                 <div class="menu-section">
                     <div class="section-header">${t('settings')}</div>
-                    <a class="menu-item${navLockClass('settings')}" onclick="${navClickHandler('settings', "navigateTo('settings')")}">
+                    <a class="menu-item${navLockClass('settings')}" data-page="settings" href="https://mix-goldd-settings.vercel.app/" onclick="event.preventDefault(); ${navClickHandler('settings', "openStandalonePage('settings')")}">
                         <div class="menu-icon"><i class="fas fa-cog"></i></div>
                         <div class="menu-text">${t('settings')}</div>
                         ${navLockIcon('settings')}
                     </a>
                 </div>`;
             
-            sidebarMenu.innerHTML = html;
-            rebuildVideoCategories();
-        }
+	            sidebarMenu.innerHTML = html;
+	            rebuildVideoCategories();
+	            // يمكن أن تعيد المصادقة أو تغيير اللغة بناء القائمة بعد الانتقال؛
+	            // لذا نعيد تطبيق التحديد على العنصر الملائم للصفحة الحالية دائماً.
+	            updateSidebarActiveState(currentPage);
+	        }
 
         function rebuildVideoCategories() {
             const categories = getVideoCategories();
@@ -6312,12 +7072,34 @@
             return card;
         }
 
+        function splitEpisodeFromPostTitle(rawTitle) {
+            const title = String(rawTitle || '').trim();
+            const match = title.match(/(?:^|[\s\-–—:])(?:الحلقة|حلقة|episode|ep\.)\s*(\d+)\b/i);
+            if (!match || typeof match.index !== 'number') {
+                return { workTitle: title, episodeLabel: '' };
+            }
+
+            const workTitle = title.slice(0, match.index).trim().replace(/[\s\-–—:]+$/, '');
+            if (!workTitle) {
+                return { workTitle: title, episodeLabel: '' };
+            }
+
+            const episodeNumber = match[1];
+            const useArabicLabel = currentLanguage === 'ar' || /(?:الحلقة|حلقة)/i.test(match[0]);
+            return {
+                workTitle,
+                episodeLabel: useArabicLabel ? `الحلقة ${episodeNumber}` : `Episode ${episodeNumber}`
+            };
+        }
+
         function createImageCard(character) {
             const isSaved = savedImages.includes(character.url);
             const div = document.createElement('div');
             div.className = `image-card ${isSaved ? 'saved' : ''}`;
             div.dataset.name = character.name;
-            div.dataset.url = character.url;
+            div.dataset.postId = character.id || '';
+            div.dataset.url = character.id || character.url;
+            div.dataset.imageUrl = character.url;
             div.dataset.category = character.category;
             div.dataset.studio = character.studio || "";
             div.dataset.series = character.series || "";
@@ -6331,7 +7113,7 @@
             wrapper.appendChild(img);
             const dateSpan = document.createElement('div');
             dateSpan.className = 'post-date';
-            dateSpan.innerHTML = `<i class="far fa-calendar-alt"></i> ${character.date}`;
+            dateSpan.innerHTML = `<i class="far fa-calendar-alt"></i> ${getLocalizedDateLabel(character)}`;
             wrapper.appendChild(dateSpan);
             const durationBadge = document.createElement('div');
             durationBadge.className = 'duration-badge';
@@ -6339,8 +7121,9 @@
             wrapper.appendChild(durationBadge);
             const infoDiv = document.createElement('div');
             infoDiv.className = 'post-info';
+            const titleParts = splitEpisodeFromPostTitle(character.title || character.name);
             infoDiv.innerHTML = `
-                <div class="post-title">${character.title || character.name}</div>
+                <div class="post-title"><span class="post-title-main">${escapeHtml(titleParts.workTitle)}</span>${titleParts.episodeLabel ? `<span class="post-title-episode">${escapeHtml(titleParts.episodeLabel)}</span>` : ''}</div>
                 <div class="post-stats-row">
                     <span><i class="fas fa-eye"></i> <span class="card-views-value">–</span></span>
                     <span><i class="fas fa-thumbs-up"></i> <span class="card-likes-value">–</span></span>
@@ -6535,13 +7318,19 @@
         }
 
         function renderPostPublisherInfo(video) {
-            const studio = (video && video.studio) ? video.studio : null;
-            const series = (video && video.series) ? video.series : null;
+            const studio = (video && typeof video.studio === 'string') ? video.studio.trim() : '';
+            const series = (video && typeof video.series === 'string') ? video.series.trim() : '';
 
             const studioBtn = document.getElementById('post-studio-btn');
             const seriesBtn = document.getElementById('post-series-btn');
-            if (studioBtn) studioBtn.textContent = studio || '—';
-            if (seriesBtn) seriesBtn.textContent = series || '—';
+            const studioMeta = document.getElementById('post-studio-meta');
+            const seriesMeta = document.getElementById('post-series-meta');
+            const metaLinks = document.querySelector('.post-meta-links');
+            if (studioBtn) studioBtn.textContent = studio;
+            if (seriesBtn) seriesBtn.textContent = series;
+            if (studioMeta) studioMeta.style.display = studio ? '' : 'none';
+            if (seriesMeta) seriesMeta.style.display = series ? '' : 'none';
+            if (metaLinks) metaLinks.style.display = studio || series ? '' : 'none';
 
             const row = document.getElementById('post-publisher-row');
             if (!studio) {
@@ -6562,9 +7351,12 @@
         function renderPostCategoryTags(video) {
             const container = document.getElementById('post-category-tags');
             if (!container) return;
-            const cats = (video && Array.isArray(video.categories) && video.categories.length)
+            const rawCategories = (video && Array.isArray(video.categories) && video.categories.length)
                 ? video.categories
                 : (video && video.category ? [video.category] : []);
+            const cats = rawCategories
+                .filter(category => typeof category === 'string' && category.trim())
+                .map(category => category.trim());
             const section = container.closest('.categories-section');
             if (!cats.length) {
                 if (section) section.style.display = 'none';
@@ -6575,6 +7367,67 @@
             container.innerHTML = cats
                 .map(c => `<button class="meta-link" onclick="selectSidebarCategory('${String(c).replace(/'/g, "\\'")}')">${c}</button>`)
                 .join('');
+        }
+
+        function renderPostDescription(video) {
+            const section = document.getElementById('post-description-section');
+            const text = document.getElementById('desc-text');
+            const toggle = document.getElementById('desc-toggle-btn');
+            if (!section || !text || !toggle) return;
+
+            const description = (video && typeof video.description === 'string')
+                ? video.description.trim()
+                : '';
+            section.hidden = !description;
+            text.classList.remove('expanded');
+            text.textContent = description;
+            toggle.innerHTML = `<span>${t('showMore')}</span> <i class="fas fa-chevron-down"></i>`;
+        }
+
+        function renderPostModels(video) {
+            const section = document.getElementById('post-models-section');
+            const list = document.getElementById('post-models-list');
+            const toggle = document.getElementById('models-toggle-btn');
+            if (!section || !list) return;
+
+            const linkedStarIds = video && Array.isArray(video.model_ids) && video.model_ids.length
+                ? video.model_ids
+                : (video && video.model_id ? [video.model_id] : []);
+            const linkedStars = modelsData.filter(model => linkedStarIds.includes(model.id));
+
+            list.innerHTML = '';
+            list.classList.remove('expanded');
+            if (!linkedStars.length) {
+                section.style.display = 'none';
+                if (toggle) toggle.hidden = true;
+                return;
+            }
+
+            section.style.display = '';
+            linkedStars.forEach(model => {
+                const card = document.createElement('button');
+                card.type = 'button';
+                card.className = 'model-card';
+                card.dataset.modelName = model.name;
+                card.setAttribute('aria-label', `Open ${model.name}`);
+                card.onclick = () => showModelDetail(model.id);
+
+                if (model.url) {
+                    const image = document.createElement('img');
+                    image.src = model.url;
+                    image.loading = 'lazy';
+                    image.alt = model.name;
+                    image.onerror = () => { image.style.display = 'none'; };
+                    card.appendChild(image);
+                }
+
+                const name = document.createElement('div');
+                name.className = 'model-name';
+                name.textContent = model.name;
+                card.appendChild(name);
+                list.appendChild(card);
+            });
+            syncPostModelsToggle();
         }
 
         function createPureImageCard(image) {
@@ -6682,11 +7535,14 @@
                 models = models.filter(m => m.name.toLowerCase().includes(currentSearchTerm.toLowerCase()));
             }
 
-            let showVideos = true;
-            let showImages = true;
-            let showModels = true;
-            let showManga = true;
-            let showManhwa = true;
+            // Keep the Home feed aligned with the sidebar: a locked section is
+            // still visible in navigation with its lock notice, but none of its
+            // content cards are exposed on the homepage.
+            let showVideos = !isNavLocked('video');
+            let showImages = !isNavLocked('pulsex');
+            let showModels = !isNavLocked('models');
+            let showManga = !isNavLocked('comics');
+            let showManhwa = !isNavLocked('comics');
 
             if (showVideos) {
                 const sorted = advancedSortVideos(videos, currentAdvancedSort);
@@ -6719,7 +7575,7 @@
                     hydrateRealCardLikePercentages(grid);
                 }
             }
-            
+
             if (showImages) {
                 const sorted = currentAdvancedSort === 'random' ? shuffleArray([...images]) : images;
                 if (sorted.length > 0) {
@@ -6805,9 +7661,9 @@
             }
 
             const tabOptions = [];
-            if (savedVideos.length > 0) tabOptions.push({ value: 'videos', label: `Videos (${savedVideos.length})` });
+            if (savedVideos.length > 0) tabOptions.push({ value: 'videos', label: `Anime (${savedVideos.length})` });
             if (savedPureImages.length > 0) tabOptions.push({ value: 'images', label: `PulseX (${savedPureImages.length})` });
-            if (savedModelObjects.length > 0) tabOptions.push({ value: 'models', label: `Models (${savedModelObjects.length})` });
+            if (savedModelObjects.length > 0) tabOptions.push({ value: 'models', label: `${t('models')} (${savedModelObjects.length})` });
             if (savedManga.length > 0) tabOptions.push({ value: 'manga', label: `${t('manga')} (${savedManga.length})` });
             
             const selectDiv = document.createElement('div');
@@ -7116,13 +7972,6 @@
                             <div class="select-dropdown">
                                 <div class="select-option" data-lang="en">English</div>
                                 <div class="select-option" data-lang="ar">العربية</div>
-                                <div class="select-option" data-lang="fr">Français</div>
-                                <div class="select-option" data-lang="es">Español</div>
-                                <div class="select-option" data-lang="it">Italiano</div>
-                                <div class="select-option" data-lang="ru">Русский</div>
-                                <div class="select-option" data-lang="zh">中文</div>
-                                <div class="select-option" data-lang="ja">日本語</div>
-                                <div class="select-option" data-lang="ko">한국어</div>
                             </div>
                         </div>
                     </div>
@@ -7403,11 +8252,14 @@
             else if (currentPage === 'series') renderSeries();
             else if (currentPage === 'images') renderImages();
             else if (currentPage === 'settings') renderSettings();
+            else if (currentPage === 'notifications') renderNotifications();
+            else if (currentPage === 'watch-history') renderWatchHistory();
+            if (document.getElementById('post-comments-section')?.classList.contains('open')) renderCommentsList();
             updateSidebarActiveState(currentPage);
         }
 
         function getLanguageName(lang) {
-            const names = { en:'English', ar:'العربية', fr:'Français', es:'Español', it:'Italiano', ru:'Русский', zh:'中文', ja:'日本語', ko:'한국어' };
+            const names = { en:'English', ar:'العربية' };
             return names[lang] || 'English';
         }
 
@@ -7504,6 +8356,7 @@
             } else {
                 filtered.forEach(ch => container.appendChild(createImageCard(ch)));
             }
+            clearPostPlayer();
             document.getElementById('post-detail').classList.remove('active');
             document.getElementById('model-detail').classList.remove('active');
             document.getElementById('image-detail-view').classList.remove('active');
@@ -7523,16 +8376,12 @@
             updateDetailStats(url);
             bindPostDetailEvents();
             const videoData = findVideoDataByUrl(url);
-            const playerIframe = document.getElementById('vidmoly-player-iframe');
-            const playbackUrl = videoData && videoData.pageUrl ? String(videoData.pageUrl) : '';
-            let playbackHost = '';
-            try { playbackHost = new URL(playbackUrl).hostname.toLowerCase(); } catch (_) {}
-            const isVidmolyPlayback = playbackHost === 'vidmoly.biz' || playbackHost.endsWith('.vidmoly.biz') || playbackHost === 'vidmoly.me' || playbackHost.endsWith('.vidmoly.me');
-            if (playerIframe) playerIframe.src = isVidmolyPlayback ? playbackUrl : 'about:blank';
+            setPostPlayerSource(videoData?.pageUrl);
             renderSuggestedRelated(videoData);
             renderPostPublisherInfo(videoData);
             renderPostCategoryTags(videoData);
-
+            renderPostDescription(videoData);
+            renderPostModels(videoData);
             (async () => {
                 await trackPostView(url);
                 fetchTotalViews(url);
@@ -7556,12 +8405,16 @@
             }
 
             document.getElementById('image-detail-view').classList.remove('active');
+            document.getElementById('post-not-found').classList.remove('active');
             const mangaDetailElE = document.getElementById('manga-detail-view'); if (mangaDetailElE) mangaDetailElE.classList.remove('active');
             const mangaReaderElE = document.getElementById('manga-reader-view'); if (mangaReaderElE) mangaReaderElE.classList.remove('active');
             document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
             document.getElementById('post-detail').classList.add('active');
+            updateSidebarActiveState('');
 
-            const title = cardElement.querySelector('.post-title')?.textContent || cardElement.dataset.name || '';
+            const titleMain = cardElement.querySelector('.post-title-main')?.textContent?.trim() || '';
+            const episodeTitle = cardElement.querySelector('.post-title-episode')?.textContent?.trim() || '';
+            const title = [titleMain, episodeTitle].filter(Boolean).join(' ') || cardElement.dataset.name || '';
             updateHeaderForPage('post-detail', title);
         }
 
@@ -7622,7 +8475,7 @@
       params.set('img', postId);
       params.delete('post');
       params.delete('dl');
-      history.pushState({ view: 'image', id: postId }, '', '?' + params.toString());
+      history.pushState({ mixGold: true, view: 'image', id: postId }, '', '?' + params.toString());
     }
 
     function openImageById(postId) {
@@ -7684,7 +8537,7 @@
               author: row.related_model?.name || row.category || latest.author || 'S-E Team',
               authorAvatar: row.related_model?.thumbnail_url || latest.authorAvatar || '',
               pageUrl: row.page_url || latest.pageUrl || '',
-              downloadUrl: row.download_url || latest.downloadUrl || '',
+              downloadUrl: row.download_url || latest.downloadUrl || row.page_url || '',
               category: row.category || latest.category || '',
             };
           }
@@ -7723,21 +8576,16 @@
       const galleryContainer = document.getElementById('pixiv-gallery-container');
       let galleryHtml = '';
       if (Array.isArray(images) && images.length > 1) {
-        const adCount = Math.floor(images.length / AD_FREQUENCY);
-        const totalSlides = images.length + adCount;
+        const totalSlides = images.length;
         galleryHtml = `<div class="pixiv-image-container"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(title)}" onclick="toggleImageZoom(this)"><div class="pixiv-image-counter">1/${totalSlides}</div><button class="pixiv-show-all-btn" onclick="toggleExtraImages(${totalSlides})">Show all</button></div><div class="extra-images-wrapper">`;
         for (let i = 1; i < images.length; i++) {
           galleryHtml += `<div class="pixiv-image-container"><img src="${escapeHtml(images[i])}" alt="${escapeHtml(title)}" onclick="toggleImageZoom(this)"></div>`;
-          if ((i + 1) % AD_FREQUENCY === 0) {
-            galleryHtml += `<div class="pixiv-ad-slot" data-ad-slot></div>`;
-          }
         }
         galleryHtml += `</div>`;
       } else {
         galleryHtml = `<div class="pixiv-image-container"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(title)}" onclick="toggleImageZoom(this)"></div>`;
       }
       galleryContainer.innerHTML = galleryHtml;
-      populateAdSlots(galleryContainer);
 
       document.getElementById('pixiv-title').textContent = title;
       document.getElementById('pixiv-nav-title').textContent = title;
@@ -7812,7 +8660,7 @@
         }
       }
 
-      document.title = `${title} | S-E`;
+      document.title = `${title} | MIX GOLD`;
       updateHeaderForPage('images', title);
     }
 
@@ -7992,11 +8840,21 @@
         updateMangaSettingsUI();
     }
 
-    function setMangaReaderImage(src, alt) {
+    function setMangaReaderImage(src, alt, transition = null) {
         const imgEl = document.getElementById('manga-reader-page-img');
         if (!imgEl) return;
+        imgEl.classList.remove('manga-page-slide-from-right', 'manga-page-slide-from-left');
         imgEl.style.opacity = '0';
-        imgEl.onload = () => { imgEl.style.opacity = '1'; };
+        imgEl.onload = () => {
+            imgEl.style.opacity = '1';
+            if (!transition) return;
+            const slideFromRight = transition === 'next'
+                ? mangaReaderDirection !== 'rtl'
+                : mangaReaderDirection === 'rtl';
+            const animationClass = slideFromRight ? 'manga-page-slide-from-right' : 'manga-page-slide-from-left';
+            imgEl.classList.add(animationClass);
+            imgEl.addEventListener('animationend', () => imgEl.classList.remove(animationClass), { once: true });
+        };
         imgEl.src = src;
         imgEl.alt = alt;
     }
@@ -8039,10 +8897,7 @@
         showMangaDetail(manga);
         const mangaId = String(manga?.id || manga?.url || '');
         if (!mangaId) return;
-        const params = new URLSearchParams(location.search);
-        params.set('manga', mangaId);
-        params.delete('post'); params.delete('dl'); params.delete('img'); params.delete('ch');
-        history.pushState({ view: 'manga', id: mangaId }, '', '?' + params.toString());
+        history.pushState({ mixGold: true, view: 'manga', id: mangaId }, '', directPath('manga', mangaId));
     }
 
     function openMangaById(mangaId) {
@@ -8187,7 +9042,7 @@
             }
         }
 
-        document.title = `${title} | S-E`;
+        document.title = `${title} | MIX GOLD`;
         updateHeaderForPage('manga');
     }
 
@@ -8211,7 +9066,7 @@
         renderMangaLanguages(currentMangaPost);
 
         const startPage = typeof opts.startPage === 'number' ? opts.startPage : 0;
-        renderMangaReaderChapter(startPage, { pushState: opts.pushState });
+        renderMangaReaderChapter(startPage, { pushState: opts.pushState, transition: opts.transition });
     }
 
     // Renders the current chapter in either horizontal (single page + swipe/tap)
@@ -8252,17 +9107,17 @@
             if (counterEl) counterEl.style.display = 'block';
             const clamped = Math.max(0, Math.min(pageIndex, pages.length - 1));
             currentMangaPageIndex = clamped;
-            setMangaReaderImage(getMangaPageUrl(pages[clamped]), `${title} - ${t('chapter')} ${chapter.number} - ${clamped + 1}`);
+            setMangaReaderImage(
+                getMangaPageUrl(pages[clamped]),
+                `${title} - ${t('chapter')} ${chapter.number} - ${clamped + 1}`,
+                opts.transition || null
+            );
             if (counterEl) counterEl.textContent = `${clamped + 1} / ${pages.length}`;
         }
 
         if (opts.pushState !== false) {
             const mangaId = String(currentMangaPost.id || currentMangaPost.url || '');
-            const params = new URLSearchParams(location.search);
-            params.set('manga', mangaId);
-            params.set('ch', String(chapter.number));
-            params.set('p', String((currentMangaPageIndex || 0) + 1));
-            history.pushState({ view: 'manga-chapter', id: mangaId, ch: chapter.number, p: currentMangaPageIndex }, '', '?' + params.toString());
+            history.pushState({ mixGold: true, view: 'manga-chapter', id: mangaId, ch: chapter.number, p: currentMangaPageIndex }, '', directPath('manga', mangaId, chapter.number, (currentMangaPageIndex || 0) + 1));
         }
 
         // Only count one view per chapter open (first page), not per page turn.
@@ -8273,39 +9128,38 @@
             }
         }
 
-        document.title = `${title} - ${t('chapter')} ${chapter.number} | S-E`;
+        document.title = `${title} - ${t('chapter')} ${chapter.number} | MIX GOLD`;
     }
 
-    function mangaReaderNextPage() {
-        if (!currentMangaPost || mangaReaderMode === 'vertical') return;
-        const chapter = currentMangaPost.chapters[currentMangaChapterIndex];
-        if (!chapter) return;
-        const pages = chapter.pages || [];
-        if (currentMangaPageIndex < pages.length - 1) {
-            renderMangaReaderChapter(currentMangaPageIndex + 1);
-        } else if (currentMangaChapterIndex < currentMangaPost.chapters.length - 1) {
-            openMangaChapter(currentMangaChapterIndex + 1, { startPage: 0 });
+        function mangaReaderNextPage() {
+            if (!currentMangaPost || mangaReaderMode === 'vertical') return;
+            const chapter = currentMangaPost.chapters[currentMangaChapterIndex];
+            if (!chapter) return;
+            const pages = chapter.pages || [];
+            if (currentMangaPageIndex < pages.length - 1) {
+                renderMangaReaderChapter(currentMangaPageIndex + 1, { transition: 'next' });
+            } else if (currentMangaChapterIndex < currentMangaPost.chapters.length - 1) {
+                openMangaChapter(currentMangaChapterIndex + 1, { startPage: 0, transition: 'next' });
+            }
         }
-    }
 
-    function mangaReaderPrevPage() {
-        if (!currentMangaPost || mangaReaderMode === 'vertical') return;
-        if (currentMangaPageIndex > 0) {
-            renderMangaReaderChapter(currentMangaPageIndex - 1);
-        } else if (currentMangaChapterIndex > 0) {
-            const prevChapter = currentMangaPost.chapters[currentMangaChapterIndex - 1];
-            const lastPage = (prevChapter && prevChapter.pages) ? prevChapter.pages.length - 1 : 0;
-            openMangaChapter(currentMangaChapterIndex - 1, { startPage: lastPage });
+        function mangaReaderPrevPage() {
+            if (!currentMangaPost || mangaReaderMode === 'vertical') return;
+            if (currentMangaPageIndex > 0) {
+                renderMangaReaderChapter(currentMangaPageIndex - 1, { transition: 'prev' });
+            } else if (currentMangaChapterIndex > 0) {
+                const prevChapter = currentMangaPost.chapters[currentMangaChapterIndex - 1];
+                const lastPage = (prevChapter && prevChapter.pages) ? prevChapter.pages.length - 1 : 0;
+                openMangaChapter(currentMangaChapterIndex - 1, { startPage: lastPage, transition: 'prev' });
+            }
         }
-    }
 
     function backFromMangaReader() {
-        if (!currentMangaPost) { navigateTo('manga'); return; }
-        showMangaDetail(currentMangaPost);
+        returnToPreviousView('manga');
     }
 
     function backFromMangaDetail() {
-        navigateTo('manga');
+        returnToPreviousView('manga');
     }
 
     function handleMangaFav() {
@@ -8367,34 +9221,18 @@
         }, { heading: 'Sign In', subtext: 'Sign in to follow' });
     }
 
-    function buildAdSlotHtml() {
-      return `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;}</style></head><body>
-<script type="text/javascript">
-atOptions = {
-  'key' : '${ADSTERRA_KEY}',
-  'format' : 'iframe',
-  'height' : ${ADSTERRA_HEIGHT},
-  'width' : ${ADSTERRA_WIDTH},
-  'params' : {}
-};
-<\/script>
-<script type="text/javascript" src="//www.highperformanceformat.com/${ADSTERRA_KEY}/invoke.js"><\/script>
-</body></html>`;
+    function isMangaReaderActive() {
+      return document.getElementById('manga-reader-view')?.classList.contains('active') === true;
     }
-    function populateAdSlots(container) {
-      container.querySelectorAll('[data-ad-slot]').forEach(slot => {
-        slot.removeAttribute('data-ad-slot');
-        const label = document.createElement('div');
-        label.className = 'pixiv-ad-slot-label';
-        label.textContent = 'Advertisement';
-        const iframe = document.createElement('iframe');
-        iframe.width = String(ADSTERRA_WIDTH);
-        iframe.height = String(ADSTERRA_HEIGHT);
-        iframe.scrolling = 'no';
-        iframe.srcdoc = buildAdSlotHtml();
-        slot.appendChild(label);
-        slot.appendChild(iframe);
-      });
+
+    function loadSocialBarOnce() {
+      if (!getActiveAgreementTimestamp() || isMangaReaderActive() || hasSeenSocialBarInVisit()) return;
+      if (document.querySelector('script[data-mix-gold-social-bar="true"]')) return;
+      markSocialBarSeenInVisit();
+      const script = document.createElement('script');
+      script.dataset.mixGoldSocialBar = 'true';
+      script.src = ADSTERRA_SOCIAL_BAR_SRC;
+      document.body.appendChild(script);
     }
 function toggleSave(url, cardElement) {
             requireAuth(() => {
@@ -8425,16 +9263,14 @@ function toggleSave(url, cardElement) {
         }
 
         function findVideoDataByUrl(url) {
-            const fromCharacters = characterData.find(v => v.url === url);
+            const fromCharacters = characterData.find(v => v.id === url || v.url === url);
             if (fromCharacters) return fromCharacters;
-            return Object.values(modelPostsData).find(p => p.url === url) || null;
+            return Object.values(modelPostsData).find(p => p.id === url || p.url === url) || null;
         }
 
         // ---- Post links & download subpage ----
-        // Posts are keyed throughout this app by their thumbnail url (see
-        // dataset.url on every card), so the shareable slug for a post/download
-        // link is just a short alphanumeric hash of that same key — no extra
-        // "file title" needs to be typed anywhere, and no DB column is needed.
+        // Every shareable route is keyed by the post record id, not by a
+        // thumbnail URL. This keeps two posts with the same cover independent.
         function slugFromKey(key) {
             const str = String(key || '');
             let hash = 5381;
@@ -8446,14 +9282,58 @@ function toggleSave(url, cardElement) {
         }
 
         function findVideoDataBySlug(slug) {
-            const fromCharacters = characterData.find(v => slugFromKey(v.url) === slug);
+            const fromCharacters = characterData.find(v => v.id === slug || slugFromKey(v.id || v.url) === slug || slugFromKey(v.url) === slug);
             if (fromCharacters) return fromCharacters;
-            return Object.values(modelPostsData).find(p => slugFromKey(p.url) === slug) || null;
+            return Object.values(modelPostsData).find(p => p.id === slug || slugFromKey(p.id || p.url) === slug || slugFromKey(p.url) === slug) || null;
+        }
+
+        const MIX_GOLD_PAGES = ['home', 'videos', 'manga', 'manhwa', 'models', 'studios', 'series', 'images', 'saved', 'notifications', 'watch-history', 'settings', 'profile', 'login'];
+
+        function decodeRoutePart(value) {
+            try { return decodeURIComponent(value || ''); }
+            catch (_) { return value || ''; }
+        }
+
+        function getDirectRoute() {
+            const params = new URLSearchParams(location.search);
+            const parts = location.pathname.replace(/^\/+|\/+$/g, '').split('/').filter(Boolean).map(decodeRoutePart);
+            const route = {
+                page: window.MIX_GOLD_INITIAL_PAGE || params.get('page') || 'home',
+                post: params.get('post'), dl: params.get('dl'), img: params.get('img'),
+                manga: params.get('manga'), ch: params.get('ch'), p: params.get('p')
+            };
+            if (parts[0] === 'post' && parts[1]) route.post = parts[1];
+            else if (parts[0] === 'download' && parts[1]) route.dl = parts[1];
+            else if (parts[0] === 'manga' && parts[1]) {
+                route.manga = parts[1];
+                if (parts[2] === 'chapter' && parts[3]) {
+                    route.ch = parts[3];
+                    if (parts[4] === 'page' && parts[5]) route.p = parts[5];
+                }
+            }
+            if (!MIX_GOLD_PAGES.includes(route.page)) route.page = 'home';
+            return route;
+        }
+
+        function directPath(type, value, chapterNumber, pageNumber) {
+            const encodedValue = encodeURIComponent(String(value || ''));
+            if (type === 'post') return `/post/${encodedValue}`;
+            if (type === 'download') return `/download/${encodedValue}`;
+            if (type === 'manga') {
+                let path = `/manga/${encodedValue}`;
+                if (chapterNumber !== undefined && chapterNumber !== null) {
+                    path += `/chapter/${encodeURIComponent(String(chapterNumber))}`;
+                    if (pageNumber !== undefined && pageNumber !== null) path += `/page/${encodeURIComponent(String(pageNumber))}`;
+                }
+                return path;
+            }
+            return '/';
         }
 
         function clearRouteParams() {
-            if (location.search.indexOf('post=') !== -1 || location.search.indexOf('dl=') !== -1 || location.search.indexOf('manga=') !== -1 || location.search.indexOf('img=') !== -1) {
-                history.replaceState({}, '', location.pathname);
+            const route = getDirectRoute();
+            if (route.post || route.dl || route.manga || route.img) {
+                history.replaceState({ ...(history.state || {}), mixGold: true, view: 'page', page: 'home' }, '', '/');
             }
         }
 
@@ -8462,11 +9342,8 @@ function toggleSave(url, cardElement) {
         // button returns to the homepage.
         function openPostFromCard(cardElement) {
             showPostDetail(cardElement);
-            const slug = slugFromKey(cardElement.dataset.url);
-            const params = new URLSearchParams(location.search);
-            params.set('post', slug);
-            params.delete('dl');
-            history.pushState({ view: 'post', slug: slug }, '', '?' + params.toString());
+            const slug = slugFromKey(cardElement.dataset.postId || cardElement.dataset.url);
+            history.pushState({ mixGold: true, view: 'post', slug: slug }, '', directPath('post', slug));
         }
 
         // Resolve a post link directly (page load, back/forward navigation).
@@ -8474,21 +9351,44 @@ function toggleSave(url, cardElement) {
         // showPostDetail() already expects, without it needing to be on screen.
         function openPostBySlug(slug) {
             const videoData = findVideoDataBySlug(slug);
-            if (!videoData) return false;
+            if (!videoData) {
+                showPostNotFound();
+                return true;
+            }
             showPostDetail(createImageCard(videoData));
             return true;
         }
 
+        function showPostNotFound() {
+            clearPostPlayer();
+            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
+            document.getElementById('post-detail').classList.remove('active');
+            document.getElementById('model-detail').classList.remove('active');
+            document.getElementById('image-detail-view').classList.remove('active');
+            document.getElementById('login-view').classList.remove('active');
+            const downloadDetail = document.getElementById('download-detail');
+            if (downloadDetail) downloadDetail.classList.remove('active');
+            const mangaDetail = document.getElementById('manga-detail-view');
+            if (mangaDetail) mangaDetail.classList.remove('active');
+            const mangaReader = document.getElementById('manga-reader-view');
+            if (mangaReader) mangaReader.classList.remove('active');
+            document.getElementById('post-not-found').classList.add('active');
+            currentPage = 'post-not-found';
+            updateSidebarActiveState('');
+            updateHeaderForPage('post-not-found', '404');
+        }
+
         function showDownloadDetail(videoData, cardElement) {
             currentPostCard = cardElement;
+            clearPostPlayer();
             const title = videoData.title || videoData.name || '';
             document.getElementById('download-detail-poster').src = videoData.url || '';
             document.getElementById('download-detail-title').textContent = title;
             document.getElementById('download-detail-nav-title').textContent = title;
             document.getElementById('download-detail-meta').textContent = videoData.duration ? `Duration: ${videoData.duration}` : '';
             const cta = document.getElementById('download-detail-cta');
-            cta.href = videoData.downloadUrl || '#';
-            document.getElementById('download-detail-note').textContent = videoData.downloadUrl
+            cta.href = videoData.downloadUrl || videoData.pageUrl || '#';
+            document.getElementById('download-detail-note').textContent = videoData.pageUrl
                 ? ''
                 : 'Download link is not available for this post yet.';
 
@@ -8508,11 +9408,8 @@ function toggleSave(url, cardElement) {
             const videoData = findVideoDataByUrl(currentPostCard.dataset.url);
             if (!videoData) return;
             showDownloadDetail(videoData, currentPostCard);
-            const slug = slugFromKey(currentPostCard.dataset.url);
-            const params = new URLSearchParams(location.search);
-            params.set('dl', slug);
-            params.delete('post');
-            history.pushState({ view: 'download', slug: slug }, '', '?' + params.toString());
+            const slug = slugFromKey(currentPostCard.dataset.postId || currentPostCard.dataset.url);
+            history.pushState({ mixGold: true, view: 'download', slug: slug }, '', directPath('download', slug));
         }
 
         function openDownloadBySlug(slug) {
@@ -8523,29 +9420,26 @@ function toggleSave(url, cardElement) {
         }
 
         function backToPostFromDownload() {
-            if (currentPostCard) openPostFromCard(currentPostCard);
-            else navigateTo('home');
-        }
-
-        function postSlugFromPath() {
-            const match = location.pathname.match(/^\/post\/([^/]+)\/?$/);
-            return match ? decodeURIComponent(match[1]) : '';
+            returnToPreviousView('home');
         }
 
         window.addEventListener('popstate', function () {
-            const params = new URLSearchParams(location.search);
-            const postSlug = params.get('post') || postSlugFromPath();
-            const dlSlug = params.get('dl');
-            const imgId = params.get('img');
-            const mangaId = params.get('manga');
-            const chNum = params.get('ch');
-            const pageNum = params.get('p');
+            clearPostPlayer();
+            const postDetail = document.getElementById('post-detail');
+            if (postDetail) postDetail.classList.remove('active');
+            const route = getDirectRoute();
+            const postSlug = route.post;
+            const dlSlug = route.dl;
+            const imgId = route.img;
+            const mangaId = route.manga;
+            const chNum = route.ch;
+            const pageNum = route.p;
             if (postSlug && openPostBySlug(postSlug)) return;
             if (dlSlug && openDownloadBySlug(dlSlug)) return;
             if (imgId && openImageById(imgId)) return;
             if (mangaId && chNum && openMangaChapterById(mangaId, chNum, pageNum)) return;
             if (mangaId && openMangaById(mangaId)) return;
-            navigateTo('home');
+            navigateTo(route.page || 'home', { historyMode: 'none' });
         });
 
         function initStats(url) {
@@ -8716,11 +9610,45 @@ function toggleSave(url, cardElement) {
         function bindPostDetailEvents() {
             document.getElementById('like-btn').onclick = handleLikeClick;
             document.getElementById('dislike-btn').onclick = handleDislikeClick;
+            const shareBtn = document.getElementById('share-btn');
+            if (shareBtn) shareBtn.onclick = handleShare;
         }
 
-        function handleShare() {
+        async function handleShare() {
             const url = window.location.href;
-            navigator.clipboard.writeText(url).then(() => alert('Link copied!'));
+            const title = document.title || 'MIX GOLD';
+            const text = currentMangaPost?.name || currentPostCard?.dataset?.name || title;
+
+            if (typeof navigator.share === 'function') {
+                try {
+                    await navigator.share({ title, text, url });
+                    return;
+                } catch (error) {
+                    // إلغاء لوحة المشاركة لا يعني فشلًا، ولا ينبغي نسخ الرابط عندها.
+                    if (error?.name === 'AbortError') return;
+                }
+            }
+
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(url);
+                } else {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = url;
+                    textArea.setAttribute('readonly', '');
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = '0';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    const copied = document.execCommand('copy');
+                    textArea.remove();
+                    if (!copied) throw new Error('copy command failed');
+                }
+                alert(currentLanguage === 'ar' ? 'تم نسخ الرابط' : 'Link copied!');
+            } catch (error) {
+                console.error('تعذر مشاركة الرابط أو نسخه:', error);
+                alert(currentLanguage === 'ar' ? 'تعذر مشاركة الرابط' : 'Unable to share or copy the link.');
+            }
         }
 
         function toggleReportSection() {
@@ -8929,6 +9857,28 @@ function toggleSave(url, cardElement) {
             btn.innerHTML = expanded ? `<span>${t('showLess')}</span> <i class="fas fa-chevron-up"></i>` : `<span>${t('showMore')}</span> <i class="fas fa-chevron-down"></i>`;
         }
 
+        function syncPostModelsToggle() {
+            const list = document.getElementById('post-models-list');
+            const button = document.getElementById('models-toggle-btn');
+            if (!list || !button) return;
+
+            const cards = Array.from(list.querySelectorAll('.model-card'));
+            cards.forEach((card, index) => card.classList.toggle('model-card-extra', index >= 4));
+            button.hidden = cards.length <= 4;
+            const expanded = list.classList.contains('expanded');
+            button.setAttribute('aria-expanded', String(expanded));
+            button.innerHTML = expanded
+                ? `<span>${t('showLess')}</span> <i class="fas fa-chevron-up"></i>`
+                : `<span>${t('showMore')}</span> <i class="fas fa-chevron-down"></i>`;
+        }
+
+        function togglePostModels() {
+            const list = document.getElementById('post-models-list');
+            if (!list) return;
+            list.classList.toggle('expanded');
+            syncPostModelsToggle();
+        }
+
         function toggleExtraImages(total) {
             const extra = document.querySelector('.extra-images-wrapper');
             if (extra) extra.classList.toggle('show');
@@ -9081,12 +10031,7 @@ function toggleSave(url, cardElement) {
         }
 
         async function loginWithGoogle() {
-            persistPendingAuthForRedirect();
-            const { error } = await supabaseClient.auth.signInWithOAuth({
-                provider: 'google',
-                options: { redirectTo: window.location.origin }
-            });
-            if (error) alert('خطأ في تسجيل الدخول بجوجل: ' + error.message);
+            await loginWithGoogleOnDevice();
         }
 
         async function standardLogin() {
@@ -9184,9 +10129,14 @@ function toggleSave(url, cardElement) {
         }
 
         async function init() {
+            // صفحات Vercel المستقلة تقع على نطاقات مختلفة؛ استعد الجلسة المنقولة
+            // قبل تحميل المحتوى أو رسم القائمة كي لا يظهر الحساب كزائر مؤقتًا.
+            await restoreTransferredAuthSession();
             await loadDynamicContent();
             if (!darkMode) document.body.classList.add('light-mode');
             currentUserProfile = loadCachedUserProfile();
+            await checkUserSession({ skipTransfer: true });
+            syncPostModelsToggle();
 
             setupFilterTypeSelect();
             setFilterType('videos');
@@ -9211,20 +10161,23 @@ function toggleSave(url, cardElement) {
       if (thumbsStrip) thumbsStrip.addEventListener('scroll', updateThumbsScrollbar);
       initMangaReaderSwipe();
 
-navigateTo('home');
-            const initialParams = new URLSearchParams(location.search);
-            const initialPost = initialParams.get('post') || postSlugFromPath();
-            const initialDl = initialParams.get('dl');
-            const initialImg = initialParams.get('img');
-            const initialManga = initialParams.get('manga');
-            const initialCh = initialParams.get('ch');
-            const initialPage = initialParams.get('p');
+	            const initialRoute = getDirectRoute();
+            const initialPost = initialRoute.post;
+            const initialDl = initialRoute.dl;
+            const initialImg = initialRoute.img;
+            const initialManga = initialRoute.manga;
+            const initialCh = initialRoute.ch;
+            const initialPage = initialRoute.p;
+
+            // لا ننتقل إلى Home أولًا عند فتح رابط محتوى مباشر؛ navigateTo يمسح
+            // مسار /post من شريط العنوان قبل أن يتمكن openPostBySlug من استعادته.
+            const hasDirectContentRoute = Boolean(initialPost || initialDl || initialImg || initialManga);
+            if (!hasDirectContentRoute) navigateTo(initialRoute.page, { historyMode: 'replace' });
             if (initialPost) openPostBySlug(initialPost);
             else if (initialDl) openDownloadBySlug(initialDl);
             else if (initialImg) openImageById(initialImg);
             else if (initialManga && initialCh) openMangaChapterById(initialManga, initialCh, initialPage);
             else if (initialManga) openMangaById(initialManga);
-            checkUserSession();
         }
         init();
     </script>
