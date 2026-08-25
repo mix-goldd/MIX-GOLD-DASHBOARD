@@ -307,6 +307,7 @@ export default function AnimeContent({
     return (
       <div className="am-publishing-controls" onClick={(event) => event.stopPropagation()}>
         <span
+          className="am-publishing-state"
           style={{
             fontSize: 12,
             borderRadius: 999,
@@ -317,31 +318,31 @@ export default function AnimeContent({
         >
           <i className={shared ? 'fas fa-check-circle' : due ? 'fas fa-bell' : 'far fa-clock'} /> {getWorkflowLabel(workflow)}
         </span>
-        {workflow.scheduled_at ? <span className="helper-text">{formatScheduledDate(workflow.scheduled_at)}</span> : null}
+        {workflow.scheduled_at ? <span className="helper-text am-publishing-date">{formatScheduledDate(workflow.scheduled_at)}</span> : null}
 
         {!shared && !approved && !due ? (
-          <button type="button" className="btn" onClick={() => startSchedule(item.id, workflow)}>
-            <i className="far fa-calendar-alt" /> {workflow.status === STATUS.SCHEDULED ? 'تعديل الموعد' : 'جدولة التذكير'}
+          <button type="button" className="btn am-publishing-action" onClick={() => startSchedule(item.id, workflow)} title={workflow.status === STATUS.SCHEDULED ? 'تعديل الموعد' : 'جدولة التذكير'}>
+            <i className="far fa-calendar-alt" /> <span className="am-publishing-action-label">{workflow.status === STATUS.SCHEDULED ? 'تعديل الموعد' : 'جدولة التذكير'}</span>
           </button>
         ) : null}
         {due ? (
-          <button type="button" className="btn btn-primary" onClick={() => approveManualShare(item)}>
-            <i className="fas fa-check" /> اعتماد وفتح المشاركة
+          <button type="button" className="btn btn-primary am-publishing-action" onClick={() => approveManualShare(item)} title="اعتماد وفتح المشاركة">
+            <i className="fas fa-check" /> <span className="am-publishing-action-label">اعتماد وفتح المشاركة</span>
           </button>
         ) : null}
         {approved ? (
           <>
-            <button type="button" className="btn" onClick={() => window.open(`/watch/${slugFromKey(item.thumbnail_url)}`, '_blank', 'noopener,noreferrer')}>
-              <i className="fas fa-share-alt" /> فتح المشاركة
+            <button type="button" className="btn am-publishing-action" onClick={() => window.open(`/watch/${slugFromKey(item.thumbnail_url)}`, '_blank', 'noopener,noreferrer')} title="فتح المشاركة">
+              <i className="fas fa-share-alt" /> <span className="am-publishing-action-label">فتح المشاركة</span>
             </button>
-            <button type="button" className="btn btn-primary" onClick={() => confirmShared(item.id)}>
-              <i className="fas fa-check-circle" /> تأكيد تمت المشاركة
+            <button type="button" className="btn btn-primary am-publishing-action" onClick={() => confirmShared(item.id)} title="تأكيد تمت المشاركة">
+              <i className="fas fa-check-circle" /> <span className="am-publishing-action-label">تأكيد تمت المشاركة</span>
             </button>
           </>
         ) : null}
         {!shared ? (
-          <button type="button" className="btn" onClick={() => skipShare(item.id)} title="لن يعتبر مكتملًا إلا بعد حفظ سبب التخطي">
-            تخطي مع سبب
+          <button type="button" className="btn am-publishing-action" onClick={() => skipShare(item.id)} title="تخطي مع سبب">
+            <i className="fas fa-forward" /> <span className="am-publishing-action-label">تخطي مع سبب</span>
           </button>
         ) : null}
 

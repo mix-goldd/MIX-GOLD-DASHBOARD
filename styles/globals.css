@@ -1729,7 +1729,9 @@ tr:last-child td {
   }
 
   .am-post-card {
-    gap: 9px;
+    grid-template-columns: minmax(0, 1fr) 26px;
+    align-items: start;
+    gap: 8px;
     padding: 10px;
   }
 
@@ -1738,12 +1740,14 @@ tr:last-child td {
   }
 
   .am-post-img {
-    width: 82px;
-    height: 108px;
+    width: 76px;
+    height: 96px;
+    border-radius: 8px;
   }
 
   .am-post-title {
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.2;
   }
 
   .am-post-meta {
@@ -1751,15 +1755,45 @@ tr:last-child td {
   }
 
   .am-publishing-controls {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     margin-top: 7px;
     gap: 5px;
+    width: 100%;
   }
 
-  .am-publishing-controls .btn {
-    flex: 1 1 auto;
+  .am-publishing-state,
+  .am-publishing-date {
+    grid-column: 1 / -1;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .am-publishing-action {
+    min-width: 0;
     min-height: 30px;
-    padding: 5px 7px;
-    font-size: 11px;
+    padding: 5px;
+  }
+
+  .am-publishing-action i {
+    margin: 0;
+  }
+
+  .am-publishing-action-label {
+    display: none;
+  }
+
+  .am-publishing-schedule-editor {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    width: 100%;
+  }
+
+  .am-publishing-schedule-editor input {
+    min-width: 0;
   }
 }
 
