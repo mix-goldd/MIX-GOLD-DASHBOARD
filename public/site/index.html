@@ -229,65 +229,6 @@
             to { transform: rotate(360deg); }
         }
 
-        #agreement-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            z-index: 9998;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            visibility: hidden;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        #agreement-overlay.active {
-            visibility: visible;
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .agreement-modal {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .agreement-modal h3 {
-            margin: 0 0 15px 0;
-            color: var(--primary-color);
-        }
-        .agreement-modal p {
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-        .agreement-actions {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-        .agreement-btn {
-            padding: 10px 25px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            font-size: 1rem;
-        }
-        .accept-btn {
-            background: var(--primary-color);
-            color: white;
-        }
-        .decline-btn {
-            background: #555;
-            color: white;
-        }
-
         .sidebar {
             position: fixed;
             top: 0;
@@ -3967,10 +3908,6 @@
             }
         }
 
-        /* لقطة معاينة Manus فقط: لا تغطّي نافذة الاتفاقية بطاقات 2:3. */
-        .manus-portrait-card-preview #agreement-overlay {
-            display: none !important;
-        }
         /* معاينة Manus فقط: معلومات المنشور جزء من الصورة وليست حاوية مستقلة. */
         .manus-portrait-card-preview .image-card.manus-image-info-card .post-info {
             position: absolute;
@@ -4116,17 +4053,6 @@
 
     <div id="preloader">
         <div class="spinner"></div>
-    </div>
-
-    <div id="agreement-overlay">
-        <div class="agreement-modal">
-            <h3>Agreement</h3>
-            <p>By entering this website, you agree to our terms and conditions. Do you accept?</p>
-            <div class="agreement-actions">
-                <button class="agreement-btn accept-btn" onclick="acceptAgreement()">Accept</button>
-                <button class="agreement-btn decline-btn" onclick="declineAgreement()">Decline</button>
-            </div>
-        </div>
     </div>
 
     <div id="auth-modal-overlay" onclick="if(event.target===this) closeAuthModal()">
@@ -5156,28 +5082,8 @@
         }
 
 	        let navigationSession = null;
-	        const MIX_GOLD_AGREEMENT_FRAGMENT_KEY = 'mixgold_agreement';
 	        const MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY = 'mixgold_socialbar';
 	        const MIX_GOLD_SOCIAL_BAR_SESSION_KEY = 'mixgold_social_bar_seen_v1';
-
-        function getActiveAgreementTimestamp() {
-            const savedTime = localStorage.getItem('agreedToTerms');
-            const agreedTimestamp = Number.parseInt(savedTime || '', 10);
-            const twelveHours = 12 * 60 * 60 * 1000;
-            if (!Number.isFinite(agreedTimestamp) || Date.now() - agreedTimestamp > twelveHours) {
-                if (savedTime) localStorage.removeItem('agreedToTerms');
-                return null;
-            }
-            return agreedTimestamp;
-        }
-
-	        function restoreTransferredAgreement(params) {
-	            const transferredTime = Number.parseInt(params.get(MIX_GOLD_AGREEMENT_FRAGMENT_KEY) || '', 10);
-	            const twelveHours = 12 * 60 * 60 * 1000;
-	            if (Number.isFinite(transferredTime) && Date.now() - transferredTime <= twelveHours) {
-	                localStorage.setItem('agreedToTerms', transferredTime.toString());
-	            }
-	        }
 
 	        function hasSeenSocialBarInVisit() {
 	            try {
@@ -5220,8 +5126,6 @@
                     console.warn(`تعذر تجهيز جلسة الدخول للانتقال إلى ${destinationLabel}.`);
                 }
             }
-	            const agreementTimestamp = getActiveAgreementTimestamp();
-	            if (agreementTimestamp) transferParams.set(MIX_GOLD_AGREEMENT_FRAGMENT_KEY, agreementTimestamp.toString());
 	            if (hasSeenSocialBarInVisit()) transferParams.set(MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY, '1');
 	            if (transferParams.size) target.hash = transferParams.toString();
             window.location.assign(target.toString());
@@ -5246,11 +5150,10 @@
 
 	        async function restoreTransferredAuthSession() {
 	            const params = new URLSearchParams(window.location.hash.slice(1));
-	            restoreTransferredAgreement(params);
 	            restoreTransferredSocialBar(params);
 	            const encodedSession = params.get(MIX_GOLD_AUTH_FRAGMENT_KEY);
 	            if (!encodedSession) {
-	                if (params.has(MIX_GOLD_AGREEMENT_FRAGMENT_KEY) || params.has(MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY)) {
+	                if (params.has(MIX_GOLD_SOCIAL_BAR_FRAGMENT_KEY)) {
 	                    history.replaceState(null, document.title, window.location.pathname + window.location.search);
 	                }
                 return;
@@ -5538,27 +5441,10 @@
             return translations[currentLanguage]?.[key] || translations.en[key] || key;
         }
 
-        function checkAgreement() {
-            if (!getActiveAgreementTimestamp()) {
-                document.getElementById('agreement-overlay').classList.add('active');
-            }
-        }
-
-        function acceptAgreement() {
-            localStorage.setItem('agreedToTerms', Date.now().toString());
-            document.getElementById('agreement-overlay').classList.remove('active');
-            loadSocialBarOnce();
-        }
-
-        function declineAgreement() {
-            window.location.href = 'https://www.google.com';
-        }
-
         window.addEventListener('load', function() {
             setTimeout(() => {
                 document.getElementById('preloader').classList.add('hidden');
-                checkAgreement();
-                if (getActiveAgreementTimestamp()) loadSocialBarOnce();
+                loadSocialBarOnce();
             }, 600);
         });
 
@@ -9284,7 +9170,7 @@
     }
 
     function loadSocialBarOnce() {
-      if (!getActiveAgreementTimestamp() || isMangaReaderActive() || hasSeenSocialBarInVisit()) return;
+      if (isMangaReaderActive() || hasSeenSocialBarInVisit()) return;
       if (document.querySelector('script[data-mix-gold-social-bar="true"]')) return;
       markSocialBarSeenInVisit();
       const script = document.createElement('script');

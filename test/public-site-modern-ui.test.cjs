@@ -31,6 +31,19 @@ describe('واجهة الموقع العام الحديثة', () => {
     expect(publicSiteSource).toContain('.image-card .duration-badge');
   });
 
+  it('لا يعرض نافذة Agreement أو منطق قبولها في أي صفحة من الموقع الرسمي', () => {
+    expect(publicSiteSource).not.toContain('id="agreement-overlay"');
+    expect(publicSiteSource).not.toContain('function checkAgreement()');
+    expect(publicSiteSource).not.toContain('function acceptAgreement()');
+    expect(publicSiteSource).not.toContain('function declineAgreement()');
+    expect(publicSiteSource).not.toContain('MIX_GOLD_AGREEMENT_FRAGMENT_KEY');
+    expect(publicSiteSource).not.toContain('getActiveAgreementTimestamp');
+    expect(publicSiteSource).not.toContain('restoreTransferredAgreement');
+    expect(publicSiteSource).not.toContain('mixgold_agreement');
+    expect(publicSiteSource).not.toContain('agreedToTerms');
+    expect(publicSiteSource).toContain('if (isMangaReaderActive() || hasSeenSocialBarInVisit()) return;');
+  });
+
   it('لا تنشر عنوان S-E الخاص بالواجهة القديمة', () => {
     expect(publicSiteSource).not.toContain('<title>S-E</title>');
   });
