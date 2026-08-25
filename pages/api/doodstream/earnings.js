@@ -73,7 +73,7 @@ async function loadEarningsFromProvider() {
       total: (vidmolyBalance + adsterraEarnings.historicalTotal).toFixed(5),
       earningsSources: {
         vidmoly: { balance: vidmolyBalance, today: vidmolyToday, yesterday: vidmolyYesterday, error: vidmolyError },
-        adsterra: { total: adsterraEarnings.total, historicalTotal: adsterraEarnings.historicalTotal, today: adsterraEarnings.today, yesterday: adsterraEarnings.yesterday, error: adsterraEarnings.error || null, periodStart: adsterraEarnings.periodStart || null, periodEnd: adsterraEarnings.periodEnd || null, historyPeriodStart: adsterraEarnings.historyPeriodStart || null, historyPeriodEnd: adsterraEarnings.historyPeriodEnd || null },
+        adsterra: { total: adsterraEarnings.total, historicalTotal: adsterraEarnings.historicalTotal, monthlyTotals: adsterraEarnings.monthlyTotals || [], today: adsterraEarnings.today, yesterday: adsterraEarnings.yesterday, error: adsterraEarnings.error || null, periodStart: adsterraEarnings.periodStart || null, periodEnd: adsterraEarnings.periodEnd || null, historyPeriodStart: adsterraEarnings.historyPeriodStart || null, historyPeriodEnd: adsterraEarnings.historyPeriodEnd || null },
       },
       storageUsed,
       // Only sent when none of the guesses above matched — same

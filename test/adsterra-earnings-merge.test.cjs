@@ -36,6 +36,7 @@ test('Adsterra client reads the documented items array from Statistics responses
   assert.equal(typeof getEarningsSummary, 'function');
   const source = fs.readFileSync(path.join(__dirname, '../lib/adsterra.js'), 'utf8');
   assert.match(source, /monthRanges/);
+  assert.match(source, /monthlyTotals/);
   assert.match(source, /Promise\.all\(monthRanges\.map/);
   assert.doesNotMatch(source, /HISTORY_START/);
 });
