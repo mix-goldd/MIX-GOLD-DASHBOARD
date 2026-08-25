@@ -10,9 +10,9 @@ describe('منشور الحلقة الموحد', () => {
     const createRoute = read('pages/api/content/posts.js');
     const updateRoute = read('pages/api/content/posts/[id].js');
 
-    expect(types).toContain("value: 'video', label: 'منشور / حلقة أنمي'");
+    expect(types).toContain("value: 'video', label: 'منشور / فيديو'");
     expect(types).toContain('export function normalizeContentTypes(raw)');
-    expect(types).toContain("label: 'منشور / حلقة أنمي'");
+    expect(types).toContain("label: 'منشور / فيديو'");
     expect(types).toContain("'post', 'episode', 'anime_episode', 'anime-episode'");
     expect(types).toContain("unifiedVideoLabels = new Set(['منشور', 'حلقة أنمي'");
     expect(createRoute).toContain("const type = ALLOWED_TYPES.includes(body.type) ? body.type : 'video';");

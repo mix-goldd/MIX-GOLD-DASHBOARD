@@ -860,7 +860,7 @@ export default function AnimeContent({
             <div className="am-row-between">
               <h2 style={{ margin: 0 }}>
                 <i className={editingId ? 'fas fa-pencil-alt' : 'fas fa-plus-circle'} />{' '}
-                {editingId ? 'تعديل المحتوى' : 'إضافة محتوى أنمي جديد'}
+                {editingId ? 'تعديل المحتوى' : 'إضافة محتوى جديد'}
               </h2>
               <button className="am-icon-btn" onClick={closeEditor} title="إغلاق">
                 <i className="fas fa-times" />

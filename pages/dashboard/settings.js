@@ -15,7 +15,7 @@ const SIDEBAR_ITEM_HINTS = {
   upload: 'صفحة "Add video"',
   content: 'صفحة "إضافة محتوى"',
   media: 'صفحة "مكتبة الوسائط"',
-  statistics: 'صفحة "إحصائيات الأنمي"',
+  statistics: 'صفحة "إحصائيات المحتوى"',
   contentManager: 'صفحة "مدير المحتوى"',
   comments: 'صفحة "التعليقات"',
   aiChat: 'صفحة مساعد الذكاء الاصطناعي',

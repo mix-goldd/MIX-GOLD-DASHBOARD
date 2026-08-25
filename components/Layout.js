@@ -172,7 +172,7 @@ export default function Layout({ title, session, children }) {
     { href: '/dashboard/upload', label: label('upload', 'Add video') },
     { href: '/dashboard/content', label: label('content', 'إضافة محتوى') },
     { href: '/dashboard/media', label: label('media', 'مكتبة الوسائط') },
-    { href: '/dashboard/statistics', label: label('statistics', 'إحصائيات الأنمي') },
+    { href: '/dashboard/statistics', label: label('statistics', 'إحصائيات المحتوى') },
     { href: '/dashboard/content-manager', label: label('contentManager', 'مدير المحتوى') },
     { href: '/dashboard/comments', label: label('comments', 'التعليقات') },
     { href: '/dashboard/ai-chat', label: label('aiChat', '✨ مساعد الذكاء الاصطناعي') },

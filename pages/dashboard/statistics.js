@@ -805,7 +805,7 @@ export default function AnimeStatistics({ session, posts: initialPosts, views: i
   }, [posts, viewsByKey]);
 
   return (
-    <Layout title="إحصائيات الأنمي" session={session}>
+    <Layout title="إحصائيات المحتوى" session={session}>
       <div dir="rtl" className="am-panel am-analytics">
         <div className="am-view-tabs-row">
           <div className="am-view-tabs">
@@ -979,7 +979,7 @@ export default function AnimeStatistics({ session, posts: initialPosts, views: i
             </div>
 
             <div className="card">
-              <h2 className="am-top-title">أفضل حلقات الأنمي أداءً</h2>
+              <h2 className="am-top-title">أفضل المحتويات أداءً</h2>
               {topPosts.length === 0 ? (
                 <div className="empty-state">لسه محدش شاهد أي منشور في الفترة دي.</div>
               ) : (

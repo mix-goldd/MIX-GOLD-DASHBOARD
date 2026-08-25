@@ -15,13 +15,23 @@ const DEFAULT_SIDEBAR_LABELS = {
   upload: 'Add video',
   content: 'إضافة محتوى',
   media: 'مكتبة الوسائط',
-  statistics: 'إحصائيات الأنمي',
+  statistics: 'إحصائيات المحتوى',
   contentManager: 'مدير المحتوى',
   comments: 'التعليقات',
   aiChat: '✨ مساعد الذكاء الاصطناعي',
   settings: 'الإعدادات',
   team: 'Team',
 };
+
+const LEGACY_ANIME_STATISTICS_LABEL = 'إحصائيات الأنمي';
+
+function normalizeSidebarLabels(labels) {
+  const normalized = { ...DEFAULT_SIDEBAR_LABELS, ...(labels && typeof labels === 'object' ? labels : {}) };
+  if (normalized.statistics === LEGACY_ANIME_STATISTICS_LABEL) {
+    normalized.statistics = DEFAULT_SIDEBAR_LABELS.statistics;
+  }
+  return normalized;
+}
 
 export default async function handler(req, res) {
   const session = requireAuth(req, res);
@@ -34,14 +44,14 @@ export default async function handler(req, res) {
         getSetting('content_types'),
       ]);
       return res.status(200).json({
-        sidebarLabels: { ...DEFAULT_SIDEBAR_LABELS, ...(sidebarOverride || {}) },
+        sidebarLabels: normalizeSidebarLabels(sidebarOverride),
         contentTypes: normalizeContentTypes(contentTypesOverride || POST_TYPES),
       });
     }
 
     if (req.method === 'POST') {
       const { sidebarLabels, contentTypes } = req.body || {};
-      if (sidebarLabels) await saveDashboardSetting('sidebar_labels', sidebarLabels);
+      if (sidebarLabels) await saveDashboardSetting('sidebar_labels', normalizeSidebarLabels(sidebarLabels));
       if (contentTypes) await saveSetting('content_types', contentTypes);
       return res.status(200).json({ ok: true });
     }
