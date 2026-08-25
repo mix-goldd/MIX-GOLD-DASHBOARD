@@ -643,12 +643,12 @@ export default function Dashboard({ session }) {
                 <td className="mono balance-value">${earnings.total ?? earnings.balance}</td>
               </tr>
               <tr>
-                <td>Balance</td>
+                <td>Vidmoly balance</td>
                 <td className="mono">${earnings.balance}</td>
               </tr>
             </tbody>
           </table>
-          <p className="helper-text">Total combines Vidmoly balance with Adsterra current-month revenue.</p>
+          <p className="helper-text">Total combines Vidmoly balance with all recorded Adsterra revenue. Adsterra account balance is shown only in its portal.</p>
           {earnings?.earningsSources?.adsterra?.error && (
             <p className="helper-text">Adsterra is unavailable; the total currently includes Vidmoly only.</p>
           )}

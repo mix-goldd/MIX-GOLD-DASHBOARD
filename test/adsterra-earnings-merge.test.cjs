@@ -3,10 +3,10 @@ const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-test('earnings endpoint merges Adsterra with Vidmoly in one total', () => {
+test('earnings endpoint merges historical Adsterra revenue with Vidmoly in one total', () => {
   const source = fs.readFileSync(path.join(__dirname, '../pages/api/doodstream/earnings.js'), 'utf8');
-  assert.match(source, /adsterra\.getCurrentMonthEarnings/);
-  assert.match(source, /total:\s*\(vidmolyBalance \+ adsterraEarnings\.total\)/);
+  assert.match(source, /adsterra\.getEarningsSummary/);
+  assert.match(source, /total:\s*\(vidmolyBalance \+ adsterraEarnings\.historicalTotal\)/);
   assert.match(source, /today:\s*\(vidmolyToday \+ adsterraEarnings\.today\)/);
   assert.match(source, /earningsSources/);
   assert.doesNotMatch(source, /^\s{2,}const adsterra\s*=/m);
@@ -29,8 +29,9 @@ test('Adsterra client keeps the API key server-side', () => {
 });
 
 test('Adsterra client reads the documented items array from Statistics responses', () => {
-  const { rowsFromPayload, revenueFromPayload } = require('../lib/adsterra');
+  const { rowsFromPayload, revenueFromPayload, getEarningsSummary } = require('../lib/adsterra');
   const payload = { items: [{ date: '2026-08-25', revenue: 0.15 }] };
   assert.deepEqual(rowsFromPayload(payload), payload.items);
   assert.equal(revenueFromPayload(payload), 0.15);
+  assert.equal(typeof getEarningsSummary, 'function');
 });

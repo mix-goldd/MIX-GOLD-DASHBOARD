@@ -16,7 +16,7 @@ async function loadEarningsFromProvider() {
   const [accountAttempt, statsAttempt, adsterraAttempt] = await Promise.allSettled([
     vidmoly.accountInfo(),
     vidmoly.accountStats({ last: 2 }),
-    adsterra.getCurrentMonthEarnings(),
+    adsterra.getEarningsSummary(),
   ]);
 
   // Vidmoly and Adsterra are independent. A temporary Vidmoly quota error
@@ -59,7 +59,7 @@ async function loadEarningsFromProvider() {
   const vidmolyToday = Number.parseFloat(today?.profit_total ?? 0) || 0;
   const vidmolyYesterday = Number.parseFloat(yesterday?.profit_total ?? 0) || 0;
   const adsterraEarnings = adsterraResult.error
-    ? { total: 0, today: 0, yesterday: 0, error: adsterraResult.error }
+    ? { total: 0, historicalTotal: 0, today: 0, yesterday: 0, error: adsterraResult.error }
     : adsterraResult;
 
   return {
@@ -68,10 +68,12 @@ async function loadEarningsFromProvider() {
       balance,
       today: (vidmolyToday + adsterraEarnings.today).toFixed(5),
       yesterday: (vidmolyYesterday + adsterraEarnings.yesterday).toFixed(5),
-      total: (vidmolyBalance + adsterraEarnings.total).toFixed(5),
+      // Keep the dashboard total meaningful: Vidmoly's balance plus all
+      // recorded Adsterra revenue, not only the current calendar month.
+      total: (vidmolyBalance + adsterraEarnings.historicalTotal).toFixed(5),
       earningsSources: {
         vidmoly: { balance: vidmolyBalance, today: vidmolyToday, yesterday: vidmolyYesterday, error: vidmolyError },
-        adsterra: { total: adsterraEarnings.total, today: adsterraEarnings.today, yesterday: adsterraEarnings.yesterday, error: adsterraEarnings.error || null, periodStart: adsterraEarnings.periodStart || null, periodEnd: adsterraEarnings.periodEnd || null },
+        adsterra: { total: adsterraEarnings.total, historicalTotal: adsterraEarnings.historicalTotal, today: adsterraEarnings.today, yesterday: adsterraEarnings.yesterday, error: adsterraEarnings.error || null, periodStart: adsterraEarnings.periodStart || null, periodEnd: adsterraEarnings.periodEnd || null, historyPeriodStart: adsterraEarnings.historyPeriodStart || null, historyPeriodEnd: adsterraEarnings.historyPeriodEnd || null },
       },
       storageUsed,
       // Only sent when none of the guesses above matched — same
