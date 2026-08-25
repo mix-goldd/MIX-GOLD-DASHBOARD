@@ -58,18 +58,20 @@ async function loadEarningsFromProvider() {
   const vidmolyBalance = Number.parseFloat(balance) || 0;
   const vidmolyToday = Number.parseFloat(today?.profit_total ?? 0) || 0;
   const vidmolyYesterday = Number.parseFloat(yesterday?.profit_total ?? 0) || 0;
-  const adsterra = adsterraResult.error ? { total: 0, today: 0, yesterday: 0, error: adsterraResult.error } : adsterraResult;
+  const adsterraEarnings = adsterraResult.error
+    ? { total: 0, today: 0, yesterday: 0, error: adsterraResult.error }
+    : adsterraResult;
 
   return {
     status: 200,
     result: {
       balance,
-      today: (vidmolyToday + adsterra.today).toFixed(5),
-      yesterday: (vidmolyYesterday + adsterra.yesterday).toFixed(5),
-      total: (vidmolyBalance + adsterra.total).toFixed(5),
+      today: (vidmolyToday + adsterraEarnings.today).toFixed(5),
+      yesterday: (vidmolyYesterday + adsterraEarnings.yesterday).toFixed(5),
+      total: (vidmolyBalance + adsterraEarnings.total).toFixed(5),
       earningsSources: {
         vidmoly: { balance: vidmolyBalance, today: vidmolyToday, yesterday: vidmolyYesterday, error: vidmolyError },
-        adsterra: { total: adsterra.total, today: adsterra.today, yesterday: adsterra.yesterday, error: adsterra.error || null, periodStart: adsterra.periodStart || null, periodEnd: adsterra.periodEnd || null },
+        adsterra: { total: adsterraEarnings.total, today: adsterraEarnings.today, yesterday: adsterraEarnings.yesterday, error: adsterraEarnings.error || null, periodStart: adsterraEarnings.periodStart || null, periodEnd: adsterraEarnings.periodEnd || null },
       },
       storageUsed,
       // Only sent when none of the guesses above matched — same

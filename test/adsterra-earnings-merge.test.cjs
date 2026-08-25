@@ -6,9 +6,10 @@ const assert = require('node:assert/strict');
 test('earnings endpoint merges Adsterra with Vidmoly in one total', () => {
   const source = fs.readFileSync(path.join(__dirname, '../pages/api/doodstream/earnings.js'), 'utf8');
   assert.match(source, /adsterra\.getCurrentMonthEarnings/);
-  assert.match(source, /total:\s*\(vidmolyBalance \+ adsterra\.total\)/);
-  assert.match(source, /today:\s*\(vidmolyToday \+ adsterra\.today\)/);
+  assert.match(source, /total:\s*\(vidmolyBalance \+ adsterraEarnings\.total\)/);
+  assert.match(source, /today:\s*\(vidmolyToday \+ adsterraEarnings\.today\)/);
   assert.match(source, /earningsSources/);
+  assert.doesNotMatch(source, /^\s{2,}const adsterra\s*=/m);
 });
 
 test('Adsterra refresh is isolated from temporary Vidmoly quota failures', () => {
