@@ -1628,19 +1628,27 @@ tr:last-child td {
 }
 
 .am-post-card {
-  display: flex;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
   gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 10px;
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.am-post-card-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
 }
 
 .am-post-img {
-  width: 70px;
-  height: 70px;
-  border-radius: 8px;
+  width: 94px;
+  height: 124px;
+  border-radius: 10px;
   object-fit: cover;
   flex-shrink: 0;
 }
@@ -1648,6 +1656,9 @@ tr:last-child td {
 .am-post-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .am-post-title {
@@ -1664,11 +1675,92 @@ tr:last-child td {
   display: flex;
   gap: 10px;
   margin-top: 5px;
+  flex-wrap: wrap;
+  row-gap: 4px;
 }
 
 .am-post-meta i {
   color: var(--accent);
   margin-left: 4px;
+}
+
+.am-post-card-actions {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  min-width: 36px;
+  border-inline-start: 1px solid var(--border);
+  padding-inline-start: 4px;
+}
+
+.am-publishing-controls {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.am-publishing-controls .btn {
+  min-height: 32px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+
+.am-publishing-schedule-editor {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.am-publishing-schedule-editor input {
+  min-width: 0;
+  flex: 1 1 150px;
+}
+
+@media (max-width: 600px) {
+  .am-posts-list {
+    gap: 10px;
+  }
+
+  .am-post-card {
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .am-post-card-main {
+    gap: 10px;
+  }
+
+  .am-post-img {
+    width: 82px;
+    height: 108px;
+  }
+
+  .am-post-title {
+    font-size: 13px;
+  }
+
+  .am-post-meta {
+    gap: 7px;
+  }
+
+  .am-publishing-controls {
+    margin-top: 7px;
+    gap: 5px;
+  }
+
+  .am-publishing-controls .btn {
+    flex: 1 1 auto;
+    min-height: 30px;
+    padding: 5px 7px;
+    font-size: 11px;
+  }
 }
 
 .am-icon-btn {

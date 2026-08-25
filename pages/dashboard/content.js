@@ -305,10 +305,7 @@ export default function AnimeContent({
     const scheduleOpen = scheduleEditorId === item.id;
 
     return (
-      <div
-        style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
-        onClick={(event) => event.stopPropagation()}
-      >
+      <div className="am-publishing-controls" onClick={(event) => event.stopPropagation()}>
         <span
           style={{
             fontSize: 12,
@@ -349,7 +346,7 @@ export default function AnimeContent({
         ) : null}
 
         {scheduleOpen ? (
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', width: '100%', marginTop: 4 }}>
+          <div className="am-publishing-schedule-editor">
             <input type="datetime-local" value={scheduleDraft} onChange={(event) => setScheduleDraft(event.target.value)} />
             <button type="button" className="btn btn-primary" onClick={() => saveSchedule(item.id)}>حفظ الموعد</button>
             <button type="button" className="btn" onClick={() => setScheduleEditorId(null)}>إلغاء</button>
@@ -804,46 +801,48 @@ export default function AnimeContent({
                     onClick={() => openEditorForItem(item)}
                     title="اضغط للتعديل"
                   >
-                    <img src={item.thumbnail_url} className="am-post-img" alt={item.title} />
-                    <div className="am-post-info">
-                      <div className="am-post-title">{item.title}</div>
-                      <div className="am-post-meta" style={{ flexWrap: 'wrap' }}>
-                        <span>
-                          <i className="fas fa-play-circle" /> {contentTypes.find((t) => t.value === item.type)?.label || item.type}
-                        </span>
-                        <span>
-                          <i className="far fa-calendar-alt" /> {formatPublishDate(item.created_at) || 'غير معروف'}
-                        </span>
-                        {item.duration ? (
+                    <div className="am-post-card-main">
+                      <img src={item.thumbnail_url} className="am-post-img" alt={item.title} />
+                      <div className="am-post-info">
+                        <div className="am-post-title">{item.title}</div>
+                        <div className="am-post-meta">
                           <span>
-                            <i className="fas fa-clock" /> {formatDuration(item.duration)}
+                            <i className="fas fa-play-circle" /> {contentTypes.find((t) => t.value === item.type)?.label || item.type}
                           </span>
-                        ) : null}
+                          <span>
+                            <i className="far fa-calendar-alt" /> {formatPublishDate(item.created_at) || 'غير معروف'}
+                          </span>
+                          {item.duration ? (
+                            <span>
+                              <i className="fas fa-clock" /> {formatDuration(item.duration)}
+                            </span>
+                          ) : null}
+                        </div>
+                        {renderPublishingControls(item)}
                       </div>
-                      {renderPublishingControls(item)}
                     </div>
-                    <button
-                      className="am-icon-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(item);
-                      }}
-                      title="حذف"
-                    >
-                      <i className="fas fa-trash" />
-                    </button>
-                    {item._kind === 'post' && item.thumbnail_url ? (
+                    <div className="am-post-card-actions" onClick={(event) => event.stopPropagation()}>
                       <button
                         className="am-icon-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(`/watch/${slugFromKey(item.thumbnail_url)}`, '_blank');
+                        onClick={() => {
+                          handleDelete(item);
                         }}
-                        title="فتح الصفحة الفرعية (رابط حقيقي للمشاركة)"
+                        title="حذف"
                       >
-                        <i className="fas fa-link" />
+                        <i className="fas fa-trash" />
                       </button>
-                    ) : null}
+                      {item._kind === 'post' && item.thumbnail_url ? (
+                        <button
+                          className="am-icon-btn"
+                          onClick={() => {
+                            window.open(`/watch/${slugFromKey(item.thumbnail_url)}`, '_blank');
+                          }}
+                          title="فتح الصفحة الفرعية (رابط حقيقي للمشاركة)"
+                        >
+                          <i className="fas fa-link" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ))}
               </div>
