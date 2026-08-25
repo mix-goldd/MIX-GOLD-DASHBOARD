@@ -13,11 +13,24 @@ function yesterdayStr() {
 }
 
 async function loadEarningsFromProvider() {
-  const [accountRes, statsRes, adsterraResult] = await Promise.all([
+  const [accountAttempt, statsAttempt, adsterraAttempt] = await Promise.allSettled([
     vidmoly.accountInfo(),
     vidmoly.accountStats({ last: 2 }),
-    adsterra.getCurrentMonthEarnings().catch((error) => ({ error: error.message })),
+    adsterra.getCurrentMonthEarnings(),
   ]);
+
+  // Vidmoly and Adsterra are independent. A temporary Vidmoly quota error
+  // must not discard a successful Adsterra refresh and leave the dashboard
+  // permanently showing an old all-zero earnings snapshot.
+  const accountRes = accountAttempt.status === 'fulfilled' ? accountAttempt.value : { result: {} };
+  const statsRes = statsAttempt.status === 'fulfilled' ? statsAttempt.value : { result: [] };
+  const vidmolyError = [accountAttempt, statsAttempt]
+    .filter((attempt) => attempt.status === 'rejected')
+    .map((attempt) => attempt.reason?.message || 'Vidmoly provider request failed')
+    .join(' · ') || null;
+  const adsterraResult = adsterraAttempt.status === 'fulfilled'
+    ? adsterraAttempt.value
+    : { error: adsterraAttempt.reason?.message || 'Adsterra provider request failed' };
 
   const balance = accountRes.result?.balance ?? '0';
   const days = Array.isArray(statsRes.result) ? statsRes.result : [];
@@ -55,7 +68,7 @@ async function loadEarningsFromProvider() {
       yesterday: (vidmolyYesterday + adsterra.yesterday).toFixed(5),
       total: (vidmolyBalance + adsterra.total).toFixed(5),
       earningsSources: {
-        vidmoly: { balance: vidmolyBalance, today: vidmolyToday, yesterday: vidmolyYesterday },
+        vidmoly: { balance: vidmolyBalance, today: vidmolyToday, yesterday: vidmolyYesterday, error: vidmolyError },
         adsterra: { total: adsterra.total, today: adsterra.today, yesterday: adsterra.yesterday, error: adsterra.error || null, periodStart: adsterra.periodStart || null, periodEnd: adsterra.periodEnd || null },
       },
       storageUsed,

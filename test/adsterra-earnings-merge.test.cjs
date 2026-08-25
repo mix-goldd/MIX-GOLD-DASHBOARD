@@ -11,6 +11,14 @@ test('earnings endpoint merges Adsterra with Vidmoly in one total', () => {
   assert.match(source, /earningsSources/);
 });
 
+test('Adsterra refresh is isolated from temporary Vidmoly quota failures', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../pages/api/doodstream/earnings.js'), 'utf8');
+  assert.match(source, /Promise\.allSettled/);
+  assert.match(source, /accountAttempt\.status === 'fulfilled'/);
+  assert.match(source, /adsterraAttempt\.status === 'fulfilled'/);
+  assert.match(source, /vidmolyError/);
+});
+
 test('Adsterra client keeps the API key server-side', () => {
   const source = fs.readFileSync(path.join(__dirname, '../lib/adsterra.js'), 'utf8');
   assert.match(source, /process\.env\.ADSTERRA_API_KEY/);
