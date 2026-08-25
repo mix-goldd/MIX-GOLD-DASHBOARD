@@ -4023,6 +4023,54 @@
             -webkit-backdrop-filter: blur(9px) saturate(1.15);
             backdrop-filter: blur(9px) saturate(1.15);
         }
+        /* التصميم المعتمد: معلومات بطاقة المنشور ضمن الصورة العمودية في الموقع الرسمي. */
+        .image-card.official-portrait-card .image-wrapper {
+            aspect-ratio: 2 / 3 !important;
+        }
+        .image-card.official-portrait-card .post-info {
+            position: absolute;
+            inset: auto 0 0;
+            z-index: 3;
+            display: grid;
+            gap: 6px;
+            padding: 54px 10px 10px;
+            background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.78) 38%, rgba(0, 0, 0, 0.94) 100%);
+            pointer-events: none;
+        }
+        .image-card.official-portrait-card .post-title {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap;
+            gap: 7px;
+            margin: 0;
+            color: #fff;
+            font-size: 0.84rem;
+            line-height: 1.25;
+            min-width: 0;
+        }
+        .image-card.official-portrait-card .post-title-main {
+            display: block;
+            flex: 1 1 auto;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .image-card.official-portrait-card .post-title-episode {
+            flex: 0 0 auto;
+            white-space: nowrap;
+            color: #fff;
+            font-size: 0.78rem;
+        }
+        .image-card.official-portrait-card .post-stats-row {
+            justify-content: flex-start;
+            gap: 12px;
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 0.75rem;
+        }
+        .image-card.official-portrait-card .duration-badge {
+            display: none !important;
+        }
     </style>
 </head>
 <body>
@@ -7099,7 +7147,7 @@
         function createImageCard(character) {
             const isSaved = savedImages.includes(character.url);
             const div = document.createElement('div');
-            div.className = `image-card ${isSaved ? 'saved' : ''}`;
+            div.className = `image-card official-portrait-card ${isSaved ? 'saved' : ''}`;
             div.dataset.name = character.name;
             div.dataset.postId = character.id || '';
             div.dataset.url = character.id || character.url;
@@ -7139,8 +7187,8 @@
                     <span><i class="fas fa-thumbs-up"></i> <span class="card-likes-value">–</span></span>
                 </div>
             `;
+            wrapper.appendChild(infoDiv);
             div.appendChild(wrapper);
-            div.appendChild(infoDiv);
             return div;
         }
 

@@ -23,6 +23,14 @@ describe('واجهة الموقع العام الحديثة', () => {
     expect(publicSiteSource).toContain('(?:الحلقة|حلقة|episode|ep\\.)');
   });
 
+  it('تعتمد البطاقات العمودية الحديثة داخل الموقع الرسمي دون شارة مدة منفصلة', () => {
+    expect(publicSiteSource).toContain('image-card official-portrait-card');
+    expect(publicSiteSource).toContain('.image-card.official-portrait-card .image-wrapper');
+    expect(publicSiteSource).toContain('aspect-ratio: 2 / 3 !important;');
+    expect(publicSiteSource).toContain('wrapper.appendChild(infoDiv);');
+    expect(publicSiteSource).toContain('.image-card.official-portrait-card .duration-badge');
+  });
+
   it('لا تنشر عنوان S-E الخاص بالواجهة القديمة', () => {
     expect(publicSiteSource).not.toContain('<title>S-E</title>');
   });
