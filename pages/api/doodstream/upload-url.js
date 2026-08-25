@@ -7,7 +7,7 @@ const { requireAuth } = require('../../../lib/api-auth');
 const vidmoly = require('../../../lib/vidmoly');
 const { cacheFileSize } = require('../../../lib/db');
 const { cacheKnownUploadSize } = require('../../../lib/uploadSizeCache');
-const { invalidateVidmolySnapshot } = require('../../../lib/vidmolyDashboardCache');
+const { markVidmolySnapshotStale } = require('../../../lib/vidmolyDashboardCache');
 
 // /upload/url's response shape for the queued file's identifier isn't
 // confirmed from the docs (only key/url params were shown, no response
@@ -70,7 +70,7 @@ export default async function handler(req, res) {
           console.error('Could not cache source file size:', err.message);
         }
       }
-      invalidateVidmolySnapshot('library').catch((error) => console.error('Could not invalidate library snapshot:', error.message));
+      markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
       return res.status(200).json({ ...data, filecode: fileCode, size: sourceSize });
     }
 

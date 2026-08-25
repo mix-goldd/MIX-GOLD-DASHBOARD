@@ -149,7 +149,17 @@ export default async function handler(req, res) {
 
   try {
     const force = req.query.refresh === '1' && session.role === 'admin';
-    const snapshot = await getOrRefreshVidmolySnapshot('library', () => loadLibraryFromProvider(accounts), { force });
+    const snapshot = await getOrRefreshVidmolySnapshot('library', () => loadLibraryFromProvider(accounts), {
+      force,
+      shouldPersist: (payload, existingPayload) => {
+        const result = payload?.result;
+        if (!result) return false;
+        // A complete provider pass is authoritative. If there is no saved
+        // library yet, retain a non-empty partial pass too; once saved, a
+        // quota-limited/partial result must never erase known files or sizes.
+        return Boolean(result.complete) || (!existingPayload && Array.isArray(result.files) && result.files.length > 0);
+      },
+    });
     return res.status(200).json({ ...snapshot.payload, cache: snapshot.meta });
   } catch (error) {
     return res.status(502).json({ error: error.message });

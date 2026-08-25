@@ -5,7 +5,7 @@ const vidmoly = require('../../../lib/vidmoly');
 const { getNextApiKey, recordApiOutcome } = require('../../../lib/apiKeyManager');
 const { cacheFileSize } = require('../../../lib/db');
 const { cacheKnownUploadSize } = require('../../../lib/uploadSizeCache');
-const { invalidateVidmolySnapshot } = require('../../../lib/vidmolyDashboardCache');
+const { markVidmolySnapshotStale } = require('../../../lib/vidmolyDashboardCache');
 
 // We parse the multipart body ourselves (formidable), so Next's
 // default JSON body parser must be turned off for this route.
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
           console.error('Could not cache uploaded file size:', err.message);
         }
       }
-      invalidateVidmolySnapshot('library').catch((error) => console.error('Could not invalidate library snapshot:', error.message));
+      markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
     }
 
     res.status(200).json(uploadData);
