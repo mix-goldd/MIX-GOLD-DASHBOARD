@@ -29,14 +29,22 @@ test('Adsterra client keeps the API key server-side', () => {
 });
 
 test('Adsterra client reads the documented items array from Statistics responses', () => {
-  const { rowsFromPayload, revenueFromPayload, getEarningsSummary } = require('../lib/adsterra');
+  const { rowsFromPayload, revenueFromPayload, statisticsRevenueFromPayload, getEarningsSummary } = require('../lib/adsterra');
   const payload = { items: [{ date: '2026-08-25', revenue: 0.15 }] };
   assert.deepEqual(rowsFromPayload(payload), payload.items);
   assert.equal(revenueFromPayload(payload), 0.15);
+  assert.equal(statisticsRevenueFromPayload({ items: [
+    { date: '2026-02-04', revenue: 0.01 },
+    { date: '2026-02-05', revenue: 0.01 },
+    { date: '2026-02-20', revenue: 0.02 },
+    { date: '2026-07-08', revenue: 0.109 },
+    { date: '2026-06-03', revenue: 0.004 },
+  ] }), 0.15);
   assert.equal(typeof getEarningsSummary, 'function');
   const source = fs.readFileSync(path.join(__dirname, '../lib/adsterra.js'), 'utf8');
   assert.match(source, /monthRanges/);
   assert.match(source, /monthlyTotals/);
+  assert.match(source, /statisticsRevenueFromPayload/);
   assert.match(source, /Promise\.all\(monthRanges\.map/);
   assert.doesNotMatch(source, /HISTORY_START/);
 });

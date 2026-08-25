@@ -648,7 +648,7 @@ export default function Dashboard({ session }) {
               </tr>
             </tbody>
           </table>
-          <p className="helper-text">Total combines Vidmoly balance with Adsterra revenue recorded this year. Adsterra account balance is shown only in its portal.</p>
+          <p className="helper-text">Total combines Vidmoly balance with this year's Adsterra Statistics total, rounded per day as in the Adsterra report. Adsterra account balance is shown only in its portal.</p>
           {earnings?.earningsSources?.adsterra?.error && (
             <p className="helper-text">Adsterra is unavailable; the total currently includes Vidmoly only.</p>
           )}
