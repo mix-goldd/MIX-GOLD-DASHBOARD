@@ -16,4 +16,12 @@ test('Adsterra client keeps the API key server-side', () => {
   assert.match(source, /process\.env\.ADSTERRA_API_KEY/);
   assert.doesNotMatch(source, /7e00e992212f36894d210623d9902af7/);
   assert.match(source, /X-API-Key/);
+  assert.match(source, /group_by:\s*'date'/);
+});
+
+test('Adsterra client reads the documented items array from Statistics responses', () => {
+  const { rowsFromPayload, revenueFromPayload } = require('../lib/adsterra');
+  const payload = { items: [{ date: '2026-08-25', revenue: 0.15 }] };
+  assert.deepEqual(rowsFromPayload(payload), payload.items);
+  assert.equal(revenueFromPayload(payload), 0.15);
 });
