@@ -639,15 +639,11 @@ export default function Dashboard({ session }) {
                 <td>Total earnings</td>
                 <td className="mono balance-value">${earnings.total ?? earnings.balance}</td>
               </tr>
-              <tr>
-                <td>Vidmoly balance</td>
-                <td className="mono">${earnings.balance}</td>
-              </tr>
             </tbody>
           </table>
-          <p className="helper-text">Total combines Vidmoly balance with this year's Adsterra Statistics total, rounded per day as in the Adsterra report. Adsterra account balance is shown only in its portal.</p>
+          <p className="helper-text">Total earnings includes the available earnings data, with this year&apos;s Adsterra Statistics rounded per day as in the Adsterra report.</p>
           {earnings?.earningsSources?.adsterra?.error && (
-            <p className="helper-text">Adsterra is unavailable; the total currently includes Vidmoly only.</p>
+            <p className="helper-text">Adsterra is unavailable; the total may be incomplete until its data is available again.</p>
           )}
           </>
         ) : (
