@@ -47,7 +47,6 @@ export default function Dashboard({ session }) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [debugSample, setDebugSample] = useState(null);
   const [fetchWarning, setFetchWarning] = useState(null);
   const [selected, setSelected] = useState(new Set());
   const [moveTarget, setMoveTarget] = useState('');
@@ -66,7 +65,6 @@ export default function Dashboard({ session }) {
   const [fileBusy, setFileBusy] = useState(false);
   const [fileActionStatus, setFileActionStatus] = useState(null);
   const [libraryFolders, setLibraryFolders] = useState([]);
-  const [sourceWarnings, setSourceWarnings] = useState([]);
   const [vidmolyKeys, setVidmolyKeys] = useState([]);
   const [sizeMeasurementStatus, setSizeMeasurementStatus] = useState({});
   const [quotaExpanded, setQuotaExpanded] = useState(false);
@@ -95,7 +93,6 @@ export default function Dashboard({ session }) {
         setFolders(data.result.folders || []);
         setLibraryFolders(data.result.libraryFolders || []);
         setTotalSize(data.result.totalSize ?? null);
-        setSourceWarnings(data.result.sourceWarnings || []);
       }
     } catch (err) {
       setError('Could not reach the server.');
@@ -801,38 +798,10 @@ export default function Dashboard({ session }) {
         )}
 
         {error && <div className="banner banner-error">{error}</div>}
-        {sourceWarnings.length > 0 && (
-          <div className="banner banner-warning">
-            <strong>تعذر تحديث بعض حسابات Vidmoly بالكامل.</strong> لا تزال نتائج الحسابات المتاحة موجودة في الجدول الموحد.
-            <ul className="quota-warning-list">
-              {sourceWarnings.map((warning, index) => (
-                <li key={`${typeof warning === 'string' ? warning : warning.accountLabel}-${index}`}>
-                  {typeof warning === 'string' ? warning : (
-                    <>
-                      <strong>{warning.accountLabel}:</strong>{' '}
-                      {getQuotaRenewalText(vidmolyKeys.find((key) => key.label === warning.accountLabel) || { configured: true, state: 'waiting', nextAvailableAt: warning.waitUntil })}.
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {earnings?.accountRaw && (
-          <div className="banner banner-warning">
-            Storage isn&apos;t showing because Account Info&apos;s response doesn&apos;t use any of the field
-            names this page tried. Screenshot this so it can be fixed for real:
-            <br />
-            {JSON.stringify(earnings.accountRaw)}
-          </div>
-        )}
-        {debugSample && (
-          <div className="banner banner-warning">
-            Size and/or thumbnail are blank for at least one video — Vidmoly&apos;s response doesn&apos;t use
-            the field names this page expected. Screenshot this so it can be fixed for real:
-            <br />
-            {JSON.stringify(debugSample)}
-          </div>
+        {nextVidmolyRenewalAt && (
+          <p className="helper-text quota-renewal-note" aria-live="polite">
+            أقرب تجدد للحصة: <strong className="api-key-countdown">{formatQuotaCountdown(nextVidmolyRenewalAt)}</strong>
+          </p>
         )}
 
         {loading ? (
