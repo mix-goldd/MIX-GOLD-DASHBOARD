@@ -41,4 +41,28 @@ describe('incremental Vidmoly library refresh', () => {
     expect(result.libraryFolders.map((folder) => folder.name).sort()).toEqual(['Keep Two', 'New One']);
     expect(result.complete).toBe(false);
   });
+
+  it('merges one refreshed page without deleting older files from the same account', () => {
+    const result = mergeIncrementalLibraryResult({
+      existingResult: {
+        files: [
+          { file_code: 'old-a', sourceAccountId: 'one', size: 10 },
+          { file_code: 'old-b', sourceAccountId: 'one', size: 20 },
+        ],
+        complete: true,
+      },
+      refreshedResult: {
+        files: [{ file_code: 'new-a', sourceAccountId: 'one', size: 30 }],
+        accountTotal: { accountId: 'one', total: 3 },
+        preserveExistingAccountFiles: true,
+        complete: false,
+      },
+      account: accounts[0],
+      accountIndex: 0,
+      accountCount: accounts.length,
+    });
+
+    expect(result.files.map((file) => file.file_code).sort()).toEqual(['new-a', 'old-a', 'old-b']);
+    expect(result.complete).toBe(true);
+  });
 });

@@ -9,10 +9,11 @@ const { getConfiguredApiKeyDefinitions } = require('../../../lib/apiKeyManager')
 const { syncKnownFiles, getCachedFileDetails } = require('../../../lib/db');
 const { getOrRefreshVidmolySnapshot } = require('../../../lib/vidmolyDashboardCache');
 const { selectNextVidmolyAccount, mergeIncrementalLibraryResult } = require('../../../lib/vidmolyIncrementalLibrary');
+const { collectOneVidmolyPage } = require('../../../lib/vidmolyOneRequestRefresh');
 const {
   getFileCode,
   accountCacheCode,
-  collectAllAccountFiles,
+  extractFileArray,
   buildUnifiedVideoFiles,
 } = require('../../../lib/unifiedVidmolyLibrary');
 
@@ -26,27 +27,14 @@ async function loadLibraryFromProvider(accounts, existingPayload = null) {
   let primaryFolders = [];
   let accountTotal = null;
 
-    // Sequential on purpose. The Vidmoly client also serializes requests, but
-    // this keeps the account-level failure handling clear and non-bursty.
-    const accountListings = await collectAllAccountFiles(
-      [account],
-      (accountId, opts) => vidmoly.listFilesForAccount(accountId, opts)
-    );
-    for (const [{ account, listed, error }] of accountListings) {
-      if (error) {
-        if (error?.code === 'API_QUOTA_WAIT') {
-          sourceWarnings.push({
-            type: 'quota_wait',
-            accountLabel: account.label,
-            waitUntil: error.waitUntil || null,
-          });
-        } else {
-          sourceWarnings.push(`${account.label}: ${error.message}`);
-        }
-        throw error;
-      }
-
-      const files = listed.files;
+    // A dashboard refresh must make exactly one provider request. Fresh data
+    // is merged into the durable snapshot; folders and other accounts stay
+    // cached so reloading this page never spends the whole daily allocation.
+    const listed = await collectOneVidmolyPage({
+      fetchPage: (page) => vidmoly.listFilesForAccount(account.id, { page }),
+      getFiles: extractFileArray,
+    });
+    const fetchedFiles = listed.files;
       if (listed.stopped === 'rate-limited') {
         sourceWarnings.push(`${account.label}: تم بلوغ حد الطلبات أثناء تجميع المكتبة؛ تظهر النتائج المتاحة فقط.`);
       } else if (listed.stopped === 'invalid-response') {
@@ -59,47 +47,31 @@ async function loadLibraryFromProvider(accounts, existingPayload = null) {
       accountTotal = {
         accountId: account.id,
         label: account.label,
-        returned: files.length,
-        total: listed.reportedTotal ?? files.length,
+        returned: fetchedFiles.length,
+        total: listed.reportedTotal ?? fetchedFiles.length,
         complete: listed.complete,
       };
 
-      let accountFolders = [];
-      try {
-        const foldersRes = await vidmoly.listFoldersForAccount(account.id);
-        if (Array.isArray(foldersRes.result?.folders)) accountFolders = foldersRes.result.folders;
-      } catch (folderError) {
-        sourceWarnings.push(`${account.label}: تعذر تحميل أسماء المجلدات.`);
-      }
-
-      primaryFolders = accountFolders;
-      const folderNames = new Map(accountFolders.map((folder) => [String(folder.fld_id), folder.name]));
-      accountFolders.forEach((folder) => {
-        libraryFolders.push({
-          key: `${account.id}:${folder.fld_id}`,
-          fld_id: folder.fld_id,
-          name: folder.name,
-          accountId: account.id,
-          label: `${account.label} · ${folder.name}`,
-        });
+    const knownFolders = Array.isArray(existingPayload?.result?.libraryFolders)
+      ? existingPayload.result.libraryFolders.filter((folder) => folder.accountId === account.id)
+      : [];
+    primaryFolders = Array.isArray(existingPayload?.result?.folders) ? existingPayload.result.folders : [];
+    const folderNames = new Map(knownFolders.map((folder) => [String(folder.fld_id), folder.name]));
+    fetchedFiles.forEach((file) => {
+      const fileCode = getFileCode(file);
+      if (!fileCode) return;
+      const fldId = file.fld_id ?? null;
+      rawRows.push({
+        file,
+        fileCode,
+        account,
+        folder: fldId === null ? null : {
+          fld_id: fldId,
+          name: folderNames.get(String(fldId)) || '—',
+          key: `${account.id}:${fldId}`,
+        },
       });
-
-      files.forEach((file) => {
-        const fileCode = getFileCode(file);
-        if (!fileCode) return;
-        const fldId = file.fld_id ?? null;
-        rawRows.push({
-          file,
-          fileCode,
-          account,
-          folder: fldId === null ? null : {
-            fld_id: fldId,
-            name: folderNames.get(String(fldId)) || '—',
-            key: `${account.id}:${fldId}`,
-          },
-        });
-      });
-    }
+    });
 
     const cacheCodes = rawRows.flatMap((row) => [
       accountCacheCode(row.account.id, row.fileCode),
@@ -112,10 +84,18 @@ async function loadLibraryFromProvider(accounts, existingPayload = null) {
       sourceWarnings.push('تعذر قراءة ذاكرة تفاصيل الفيديوهات المؤقتة.');
     }
 
-    const { files } = buildUnifiedVideoFiles(rawRows, cache);
+    const { files: unifiedFiles } = buildUnifiedVideoFiles(rawRows, cache);
     const result = mergeIncrementalLibraryResult({
       existingResult: existingPayload?.result || null,
-      refreshedResult: { files, folders: primaryFolders, libraryFolders, accountTotal, sourceWarnings },
+      refreshedResult: {
+        files: unifiedFiles,
+        folders: primaryFolders,
+        libraryFolders,
+        accountTotal,
+        sourceWarnings,
+        complete: listed.complete,
+        preserveExistingAccountFiles: true,
+      },
       account,
       accountIndex,
       accountCount: accounts.length,
@@ -150,10 +130,10 @@ export default async function handler(req, res) {
       shouldPersist: (payload, existingPayload) => {
         const result = payload?.result;
         if (!result) return false;
-        // A complete provider pass is authoritative. If there is no saved
-        // library yet, retain a non-empty partial pass too; once saved, a
-        // quota-limited/partial result must never erase known files or sizes.
-        return Boolean(result.complete) || (!existingPayload && Array.isArray(result.files) && result.files.length > 0);
+        // The loader merges its one-page result with the durable snapshot, so
+        // every non-empty merged payload is safe to cache for the full TTL.
+        // This is what prevents a page reload from triggering another request.
+        return Array.isArray(result.files) && result.files.length > 0;
       },
     });
     return res.status(200).json({ ...snapshot.payload, cache: snapshot.meta });
