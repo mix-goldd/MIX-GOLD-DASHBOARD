@@ -66,7 +66,6 @@ export default function Dashboard({ session }) {
   const [fileActionStatus, setFileActionStatus] = useState(null);
   const [libraryFolders, setLibraryFolders] = useState([]);
   const [vidmolyKeys, setVidmolyKeys] = useState([]);
-  const [sizeMeasurementStatus, setSizeMeasurementStatus] = useState({});
   const [quotaExpanded, setQuotaExpanded] = useState(false);
   const [quotaError, setQuotaError] = useState('');
   const [quotaClock, setQuotaClock] = useState(Date.now());
@@ -115,48 +114,6 @@ export default function Dashboard({ session }) {
     loadEarnings();
     loadLibrary();
   }, []);
-
-  // Measure missing sizes once per file, sequentially. The server persists an
-  // attempted marker, so a page refresh cannot repeat the Vidmoly request.
-  useEffect(() => {
-    if (loading || !files.length) return undefined;
-    let cancelled = false;
-    const missing = files.filter((file) => file.size === null || file.size === undefined);
-    if (!missing.length) return undefined;
-
-    async function measureMissingSizes() {
-      for (const file of missing) {
-        if (cancelled || !file.file_code || !file.sourceAccountId) continue;
-        const measurementKey = `vidmoly-size-attempted:${file.file_code}`;
-        if (typeof window !== 'undefined' && window.localStorage.getItem(measurementKey)) {
-          setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'unavailable' }));
-          continue;
-        }
-        if (typeof window !== 'undefined') window.localStorage.setItem(measurementKey, new Date().toISOString());
-        setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'measuring' }));
-        try {
-          const res = await fetch('/api/doodstream/measure-size', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileCode: file.file_code, sourceAccountId: file.sourceAccountId }),
-          });
-          const data = await res.json();
-          if (cancelled) return;
-          if (data.sizeBytes !== null && data.sizeBytes !== undefined) {
-            setFiles((current) => current.map((item) => item.file_code === file.file_code ? { ...item, size: data.sizeBytes } : item));
-            setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'measured' }));
-          } else {
-            setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'unavailable' }));
-          }
-        } catch (error) {
-          if (!cancelled) setSizeMeasurementStatus((current) => ({ ...current, [file.file_code]: 'unavailable' }));
-        }
-      }
-    }
-
-    measureMissingSizes();
-    return () => { cancelled = true; };
-  }, [loading, files.length]);
 
   useEffect(() => {
     if (session.role !== 'admin') return undefined;
@@ -879,11 +836,7 @@ export default function Dashboard({ session }) {
                     <td className="mono nowrap">
                       {file.size !== null && file.size !== undefined
                         ? formatSize(file.size)
-                        : sizeMeasurementStatus[file.file_code] === 'measuring'
-                          ? 'Measuring…'
-                          : sizeMeasurementStatus[file.file_code] === 'unavailable'
-                            ? 'غير متاح من Vidmoly'
-                            : '—'}
+                        : '—'}
                     </td>
                     <td>{file.uploaded}</td>
                     <td>
