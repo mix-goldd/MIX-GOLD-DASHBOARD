@@ -32,11 +32,80 @@ export default function AiChat({ session }) {
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
+  const [memory, setMemory] = useState({ rules: [] });
+  const [memoryLoading, setMemoryLoading] = useState(true);
+  const [memoryError, setMemoryError] = useState(null);
+  const [newRule, setNewRule] = useState('');
+  const [memorySaving, setMemorySaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editingText, setEditingText] = useState('');
   const listRef = useRef(null);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, sending]);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/ai/memory')
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'تعذر تحميل ذاكرة المساعد.');
+        return data.memory;
+      })
+      .then((nextMemory) => {
+        if (active) setMemory(nextMemory || { rules: [] });
+      })
+      .catch((err) => active && setMemoryError(err.message))
+      .finally(() => active && setMemoryLoading(false));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  async function saveMemory(method, body, id) {
+    setMemoryError(null);
+    setMemorySaving(true);
+    try {
+      const url = id ? `/api/ai/memory?id=${encodeURIComponent(id)}` : '/api/ai/memory';
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: method === 'DELETE' ? undefined : JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر حفظ الذاكرة.');
+      setMemory(data.memory || { rules: [] });
+      return true;
+    } catch (err) {
+      setMemoryError(err.message);
+      return false;
+    } finally {
+      setMemorySaving(false);
+    }
+  }
+
+  async function addRule(e) {
+    e.preventDefault();
+    const text = newRule.trim();
+    if (!text || memorySaving) return;
+    if (await saveMemory('POST', { text })) setNewRule('');
+  }
+
+  async function updateRule(e) {
+    e.preventDefault();
+    const text = editingText.trim();
+    if (!editingId || !text || memorySaving) return;
+    if (await saveMemory('PATCH', { id: editingId, text })) {
+      setEditingId(null);
+      setEditingText('');
+    }
+  }
+
+  async function deleteRule(id) {
+    if (memorySaving || !window.confirm('حذف هذه القاعدة من ذاكرة المساعد؟')) return;
+    await saveMemory('DELETE', null, id);
+  }
 
   async function send(text) {
     const trimmed = text.trim();
@@ -70,6 +139,55 @@ export default function AiChat({ session }) {
   return (
     <Layout title="مساعد الذكاء الاصطناعي" session={session}>
       <div dir="rtl" className="ai-chat-panel">
+        <section className="ai-memory-card" aria-labelledby="ai-memory-title">
+          <div className="ai-memory-head">
+            <div>
+              <h2 id="ai-memory-title"><i className="fas fa-brain" /> ما تعلّمه مساعد MIX</h2>
+              <p>أضف قواعدك بنفسك؛ لا تُحفظ المحادثات أو الأسرار تلقائيًا.</p>
+            </div>
+            <span className="ai-memory-count">{memory.rules?.length || 0}/60 قاعدة</span>
+          </div>
+          <form className="ai-memory-add" onSubmit={addRule}>
+            <input
+              type="text"
+              value={newRule}
+              onChange={(e) => setNewRule(e.target.value)}
+              placeholder="مثال: اكتب العناوين بالعربية وبشكل قصير"
+              maxLength={500}
+              disabled={memorySaving}
+              aria-label="قاعدة جديدة للمساعد"
+            />
+            <button type="submit" className="btn btn-ai" disabled={memorySaving || !newRule.trim()}>احفظ كقاعدة</button>
+          </form>
+          {memoryError && <div className="ai-memory-error">{memoryError}</div>}
+          {memoryLoading ? (
+            <p className="ai-memory-empty">جارٍ تحميل قواعدك…</p>
+          ) : memory.rules?.length ? (
+            <ul className="ai-memory-rules">
+              {memory.rules.map((rule) => (
+                <li key={rule.id} className="ai-memory-rule">
+                  {editingId === rule.id ? (
+                    <form className="ai-memory-edit" onSubmit={updateRule}>
+                      <input value={editingText} onChange={(e) => setEditingText(e.target.value)} maxLength={500} autoFocus />
+                      <button type="submit" disabled={memorySaving || !editingText.trim()} aria-label="حفظ تعديل القاعدة"><i className="fas fa-check" /></button>
+                      <button type="button" onClick={() => { setEditingId(null); setEditingText(''); }} disabled={memorySaving} aria-label="إلغاء التعديل"><i className="fas fa-xmark" /></button>
+                    </form>
+                  ) : (
+                    <>
+                      <span>{rule.text}</span>
+                      <div className="ai-memory-actions">
+                        <button type="button" onClick={() => { setEditingId(rule.id); setEditingText(rule.text); }} disabled={memorySaving} aria-label="تعديل القاعدة"><i className="fas fa-pen" /></button>
+                        <button type="button" onClick={() => deleteRule(rule.id)} disabled={memorySaving} aria-label="حذف القاعدة"><i className="fas fa-trash" /></button>
+                      </div>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="ai-memory-empty">لا توجد قواعد محفوظة بعد. أضف أول تفضيل ليبدأ المساعد في فهم طريقتك.</p>
+          )}
+        </section>
         <div className="ai-chat-list" ref={listRef}>
           {messages.length === 0 && (
             <div className="ai-chat-empty">

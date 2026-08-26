@@ -15,6 +15,7 @@
 const { requireAuth } = require('../../../lib/api-auth');
 const gemini = require('../../../lib/gemini');
 const vidmoly = require('../../../lib/vidmoly');
+const aiMemory = require('../../../lib/aiMemory');
 
 function extractFileArray(filesRes) {
   if (Array.isArray(filesRes.result)) return filesRes.result;
@@ -215,13 +216,19 @@ export default async function handler(req, res) {
   try {
     const contents = messages.map((m) => ({ role: m.role, parts: [{ text: m.text }] }));
     const actions = [];
+    let memoryInstruction = '';
+    try {
+      memoryInstruction = aiMemory.buildMemoryInstruction(await aiMemory.getMemory(session.id));
+    } catch (_) {
+      // The assistant remains usable if the optional preference store is temporarily unavailable.
+    }
 
     // Function-calling loop, capped so a confused model can't spiral
     // into repeated tool calls forever.
     for (let i = 0; i < 5; i++) {
       const { candidate } = await gemini.generateChat(contents, {
         tools: TOOLS,
-        systemInstruction: SYSTEM_INSTRUCTION,
+        systemInstruction: SYSTEM_INSTRUCTION + memoryInstruction,
       });
       const parts = candidate?.content?.parts || [];
       const calls = parts.filter((p) => p.functionCall);
