@@ -8,6 +8,7 @@ const vidmoly = require('../../../lib/vidmoly');
 const { getConfiguredApiKeyDefinitions } = require('../../../lib/apiKeyManager');
 const { syncKnownFiles, getCachedFileDetails } = require('../../../lib/db');
 const { getOrRefreshVidmolySnapshot } = require('../../../lib/vidmolyDashboardCache');
+const { selectNextVidmolyAccount, mergeIncrementalLibraryResult } = require('../../../lib/vidmolyIncrementalLibrary');
 const {
   getFileCode,
   accountCacheCode,
@@ -15,20 +16,23 @@ const {
   buildUnifiedVideoFiles,
 } = require('../../../lib/unifiedVidmolyLibrary');
 
-async function loadLibraryFromProvider(accounts) {
+async function loadLibraryFromProvider(accounts, existingPayload = null) {
+  const selected = selectNextVidmolyAccount(accounts, existingPayload);
+  if (!selected) throw new Error('لا يوجد حساب Vidmoly متاح للتحديث.');
+  const { account, index: accountIndex } = selected;
   const rawRows = [];
-    const libraryFolders = [];
-    const sourceWarnings = [];
-    const accountTotals = [];
-    let primaryFolders = [];
+  const libraryFolders = [];
+  const sourceWarnings = [];
+  let primaryFolders = [];
+  let accountTotal = null;
 
     // Sequential on purpose. The Vidmoly client also serializes requests, but
     // this keeps the account-level failure handling clear and non-bursty.
     const accountListings = await collectAllAccountFiles(
-      accounts,
+      [account],
       (accountId, opts) => vidmoly.listFilesForAccount(accountId, opts)
     );
-    for (const [accountIndex, { account, listed, error }] of accountListings.entries()) {
+    for (const [{ account, listed, error }] of accountListings) {
       if (error) {
         if (error?.code === 'API_QUOTA_WAIT') {
           sourceWarnings.push({
@@ -39,8 +43,7 @@ async function loadLibraryFromProvider(accounts) {
         } else {
           sourceWarnings.push(`${account.label}: ${error.message}`);
         }
-        accountTotals.push({ accountId: account.id, label: account.label, returned: 0, total: 0, complete: false });
-        continue;
+        throw error;
       }
 
       const files = listed.files;
@@ -53,13 +56,13 @@ async function loadLibraryFromProvider(accounts) {
       } else if (listed.stopped === 'page-cap') {
         sourceWarnings.push(`${account.label}: توقف التجميع عند سقف آمن للصفحات لحماية حصة الحساب اليومية.`);
       }
-      accountTotals.push({
+      accountTotal = {
         accountId: account.id,
         label: account.label,
         returned: files.length,
         total: listed.reportedTotal ?? files.length,
         complete: listed.complete,
-      });
+      };
 
       let accountFolders = [];
       try {
@@ -69,7 +72,7 @@ async function loadLibraryFromProvider(accounts) {
         sourceWarnings.push(`${account.label}: تعذر تحميل أسماء المجلدات.`);
       }
 
-      if (accountIndex === 0) primaryFolders = accountFolders;
+      primaryFolders = accountFolders;
       const folderNames = new Map(accountFolders.map((folder) => [String(folder.fld_id), folder.name]));
       accountFolders.forEach((folder) => {
         libraryFolders.push({
@@ -109,32 +112,25 @@ async function loadLibraryFromProvider(accounts) {
       sourceWarnings.push('تعذر قراءة ذاكرة تفاصيل الفيديوهات المؤقتة.');
     }
 
-    const { files, totalSize } = buildUnifiedVideoFiles(rawRows, cache);
-
-    const canSynchronizeKnownFiles =
-      accountTotals.length === accounts.length && accountTotals.every((accountTotal) => accountTotal.complete);
-    if (canSynchronizeKnownFiles) {
+    const { files } = buildUnifiedVideoFiles(rawRows, cache);
+    const result = mergeIncrementalLibraryResult({
+      existingResult: existingPayload?.result || null,
+      refreshedResult: { files, folders: primaryFolders, libraryFolders, accountTotal, sourceWarnings },
+      account,
+      accountIndex,
+      accountCount: accounts.length,
+    });
+    if (result.complete) {
       try {
-        await syncKnownFiles(files.map((file) => ({ file_code: file.file_code, title: file.title, thumb: file.thumb })));
+        await syncKnownFiles(result.files.map((file) => ({ file_code: file.file_code, title: file.title, thumb: file.thumb })));
       } catch (syncError) {
         console.error('Could not sync known files for notifications:', syncError.message);
       }
-    } else {
-      sourceWarnings.push('لم تتم مزامنة إشعارات الحذف لأن قائمة فيديوهات أحد الحسابات غير مكتملة بعد.');
     }
 
   return {
     status: 200,
-    result: {
-      files,
-      folders: primaryFolders,
-      libraryFolders,
-      total: files.length,
-      totalSize,
-      accountTotals,
-      complete: canSynchronizeKnownFiles,
-      sourceWarnings,
-    },
+    result,
   };
 }
 
@@ -149,7 +145,7 @@ export default async function handler(req, res) {
 
   try {
     const force = req.query.refresh === '1' && session.role === 'admin';
-    const snapshot = await getOrRefreshVidmolySnapshot('library', () => loadLibraryFromProvider(accounts), {
+    const snapshot = await getOrRefreshVidmolySnapshot('library', (existingPayload) => loadLibraryFromProvider(accounts, existingPayload), {
       force,
       shouldPersist: (payload, existingPayload) => {
         const result = payload?.result;
