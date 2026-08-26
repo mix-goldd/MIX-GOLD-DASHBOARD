@@ -13,7 +13,7 @@ describe('Gemini credential', () => {
   }, 20_000);
 
   it('validates the secondary credential when it is configured', async () => {
-    const apiKey = process.env.GEMINI_API_KEY_SECONDARY;
+    const apiKey = process.env.GEMINI_API_KEY_2;
     if (!apiKey) return;
 
     const response = await fetch(
