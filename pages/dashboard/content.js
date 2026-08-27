@@ -203,8 +203,6 @@ export default function AnimeContent({
   const fileInputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiError, setAiError] = useState(null);
   const [publishingWorkflow, setPublishingWorkflow] = useState(normalizeWorkflow(initialPublishingWorkflow));
   const [workflowClock, setWorkflowClock] = useState(() => Date.now());
   const [scheduleEditorId, setScheduleEditorId] = useState(null);
@@ -214,6 +212,34 @@ export default function AnimeContent({
     const timer = window.setInterval(() => setWorkflowClock(Date.now()), 60000);
     return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    const savedDraft = window.sessionStorage.getItem('mix_gold_local_post_draft_v1');
+    if (!savedDraft) return;
+    window.sessionStorage.removeItem('mix_gold_local_post_draft_v1');
+    try {
+      const draft = JSON.parse(savedDraft);
+      if (!draft || typeof draft !== 'object' || !draft.title) return;
+      suppressLookupRef.current = true;
+      downloadUrlManualRef.current = Boolean(draft.download_url);
+      setEditingId(null);
+      setEditingKind(null);
+      setForm({
+        ...EMPTY_FORM,
+        type: 'video',
+        categories: categories[0] ? [categories[0]] : [],
+        title: draft.title || '',
+        image: draft.image || '',
+        url: draft.url || '',
+        download_url: draft.download_url || '',
+        duration: draft.duration || '',
+      });
+      setLookupState({ status: 'success', message: 'تم تحميل المسودة المحلية. راجع البيانات ثم احفظها بنفسك.', result: null });
+      setShowEditor(true);
+    } catch (_) {
+      window.sessionStorage.removeItem('mix_gold_local_post_draft_v1');
+    }
+  }, [categories]);
 
   // "شخصية أنمي" (model) entries live in their own `models` table — the
   // site's Models section only ever reads from there, not from `posts` —
@@ -725,38 +751,6 @@ export default function AnimeContent({
     }
   }
 
-  async function handleAiGenerate() {
-    if (!form.image) {
-      setAiError('لازم تضيف صورة الغلاف الأول عشان الذكاء الاصطناعي يقدر يحلل المحتوى.');
-      return;
-    }
-    setAiError(null);
-    setAiLoading(true);
-    try {
-      const res = await fetch('/api/ai/generate-metadata', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image_url: form.image, existing_title: form.title.trim(), type: form.type }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        // `raw` is only present when Gemini's response genuinely didn't
-        // parse as expected — same screenshot-and-fix pattern used for
-        // the Vidmoly migration's field-name mismatches.
-        throw new Error(data.raw ? `${data.error}\n${data.raw}` : data.error || 'تعذر توليد العنوان والوصف.');
-      }
-      setForm((current) => ({
-        ...current,
-        title: data.title || current.title,
-        description: data.description || current.description,
-      }));
-    } catch (err) {
-      setAiError(err.message);
-    } finally {
-      setAiLoading(false);
-    }
-  }
-
   return (
     <Layout title="إضافة محتوى" session={session}>
       <div dir="rtl" className="am-panel">
@@ -969,12 +963,9 @@ export default function AnimeContent({
               </div>
 
               <div className="field">
-                <button type="button" className="btn btn-ai" onClick={handleAiGenerate} disabled={aiLoading || !form.image}>
-                  <i className="fas fa-wand-magic-sparkles" />{' '}
-                  {aiLoading ? 'جارٍ التوليد بالذكاء الاصطناعي...' : 'اقترح عنوان ووصف بالذكاء الاصطناعي'}
-                </button>
-                {!form.image && <div className="field-hint">محتاج صورة الغلاف الأول.</div>}
-                {aiError ? <div className="banner banner-error">{aiError}</div> : null}
+                <div className="field-hint">
+                  اكتب العنوان والوصف بنفسك، أو جهّز بيانات الفيديو من صفحة «مساعد الأوامر المحلي» بدون استدعاء أي خدمة ذكاء اصطناعي.
+                </div>
               </div>
 
               {form.type !== 'model' && (

@@ -4,126 +4,72 @@ import { getSessionFromReq } from '../../lib/auth';
 
 export async function getServerSideProps({ req }) {
   const session = getSessionFromReq(req);
-  if (!session) {
-    return { redirect: { destination: '/login', permanent: false } };
-  }
+  if (!session) return { redirect: { destination: '/login', permanent: false } };
   return { props: { session } };
 }
 
 const STARTER_HINTS = [
-  'اعرضلي كل الفيديوهات',
-  'غيّر عنوان فيديو 720p لـ "الحلقة الأولى"',
-  'انشئ مجلد اسمه أنمي 2026',
-  'انقل فيديو 1080p لمجلد أنمي 2026',
+  'اعرض الفيديوهات',
+  'ابحث عن One Piece',
+  'جهز نشر الحلقة 1 من One Piece',
+  'مساعدة',
 ];
 
-function ActionLog({ action }) {
-  const ok = action.result?.success !== false && !action.result?.error;
+function ResultList({ results }) {
+  if (!Array.isArray(results) || !results.length) return null;
   return (
-    <div className={`ai-action ${ok ? 'ai-action-ok' : 'ai-action-fail'}`}>
-      <i className={`fas ${ok ? 'fa-check' : 'fa-xmark'}`} /> {action.name}
-      {action.args && Object.keys(action.args).length > 0 ? `(${JSON.stringify(action.args)})` : ''}
-    </div>
+    <ul className="ai-local-results" aria-label="نتائج مكتبة الفيديوهات">
+      {results.map((item, index) => (
+        <li key={`${item.file_code || item.title}-${index}`}>
+          <strong>{item.title}</strong>
+          <span>{item.duration ? `المدة: ${item.duration}` : 'المدة غير متاحة'}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-export default function AiChat({ session }) {
-  const [messages, setMessages] = useState([]); // { role: 'user'|'model', text, actions? }
+export default function LocalCommandAssistant({ session }) {
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
-  const [memory, setMemory] = useState({ rules: [] });
-  const [memoryLoading, setMemoryLoading] = useState(true);
-  const [memoryError, setMemoryError] = useState(null);
-  const [newRule, setNewRule] = useState('');
-  const [memorySaving, setMemorySaving] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editingText, setEditingText] = useState('');
+  const [draft, setDraft] = useState(null);
+  const [pendingChange, setPendingChange] = useState(null);
   const listRef = useRef(null);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
-  }, [messages, sending]);
-
-  useEffect(() => {
-    let active = true;
-    fetch('/api/ai/memory')
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'تعذر تحميل ذاكرة المساعد.');
-        return data.memory;
-      })
-      .then((nextMemory) => {
-        if (active) setMemory(nextMemory || { rules: [] });
-      })
-      .catch((err) => active && setMemoryError(err.message))
-      .finally(() => active && setMemoryLoading(false));
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  async function saveMemory(method, body, id) {
-    setMemoryError(null);
-    setMemorySaving(true);
-    try {
-      const url = id ? `/api/ai/memory?id=${encodeURIComponent(id)}` : '/api/ai/memory';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: method === 'DELETE' ? undefined : JSON.stringify(body),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'تعذر حفظ الذاكرة.');
-      setMemory(data.memory || { rules: [] });
-      return true;
-    } catch (err) {
-      setMemoryError(err.message);
-      return false;
-    } finally {
-      setMemorySaving(false);
-    }
-  }
-
-  async function addRule(e) {
-    e.preventDefault();
-    const text = newRule.trim();
-    if (!text || memorySaving) return;
-    if (await saveMemory('POST', { text })) setNewRule('');
-  }
-
-  async function updateRule(e) {
-    e.preventDefault();
-    const text = editingText.trim();
-    if (!editingId || !text || memorySaving) return;
-    if (await saveMemory('PATCH', { id: editingId, text })) {
-      setEditingId(null);
-      setEditingText('');
-    }
-  }
-
-  async function deleteRule(id) {
-    if (memorySaving || !window.confirm('حذف هذه القاعدة من ذاكرة المساعد؟')) return;
-    await saveMemory('DELETE', null, id);
-  }
+  }, [messages, sending, pendingChange]);
 
   async function send(text) {
-    const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    const command = text.trim();
+    if (!command || sending) return;
     setError(null);
-    const next = [...messages, { role: 'user', text: trimmed }];
-    setMessages(next);
     setInput('');
+    setMessages((current) => [...current, { role: 'user', text: command }]);
     setSending(true);
     try {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next.map((m) => ({ role: m.role, text: m.text })) }),
+        body: JSON.stringify({ command, draft }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || 'تعذر التواصل مع المساعد.');
-      setMessages((prev) => [...prev, { role: 'model', text: data.text, actions: data.actions || [] }]);
+      if (!res.ok) throw new Error(data.error || 'تعذر تنفيذ الأمر المحلي.');
+
+      if (data.action === 'prepare-draft' && data.draft) {
+        setDraft(data.draft);
+        setPendingChange(null);
+      }
+      if (data.action === 'rename-draft' || data.action === 'delete-draft') {
+        setPendingChange(data);
+      }
+      setMessages((current) => [...current, {
+        role: 'model',
+        text: data.text || 'تم تنفيذ الأمر.',
+        results: data.results || [],
+      }]);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -131,108 +77,95 @@ export default function AiChat({ session }) {
     }
   }
 
-  function handleSubmit(e) {
-    e.preventDefault();
+  function handleSubmit(event) {
+    event.preventDefault();
     send(input);
   }
 
+  function confirmPendingChange() {
+    if (!pendingChange) return;
+    if (pendingChange.action === 'rename-draft' && pendingChange.draft) {
+      setDraft(pendingChange.draft);
+      setMessages((current) => [...current, { role: 'model', text: `تم تغيير عنوان المسودة إلى «${pendingChange.draft.title}».` }]);
+    }
+    if (pendingChange.action === 'delete-draft') {
+      setDraft(null);
+      setMessages((current) => [...current, { role: 'model', text: 'تم حذف المسودة المحلية فقط. لم يُحذف أي فيديو أو منشور.' }]);
+    }
+    setPendingChange(null);
+  }
+
+  function openDraftInContentForm() {
+    if (!draft?.title) return;
+    window.sessionStorage.setItem('mix_gold_local_post_draft_v1', JSON.stringify(draft));
+    window.location.assign('/dashboard/content');
+  }
+
   return (
-    <Layout title="مساعد الذكاء الاصطناعي" session={session}>
+    <Layout title="مساعد الأوامر المحلي" session={session}>
       <div dir="rtl" className="ai-chat-panel">
-        <section className="ai-memory-card" aria-labelledby="ai-memory-title">
+        <section className="ai-memory-card" aria-labelledby="local-command-title">
           <div className="ai-memory-head">
             <div>
-              <h2 id="ai-memory-title"><i className="fas fa-brain" /> ما تعلّمه مساعد MIX</h2>
-              <p>أضف قواعدك بنفسك؛ لا تُحفظ المحادثات أو الأسرار تلقائيًا.</p>
+              <h2 id="local-command-title"><i className="fas fa-terminal" /> مساعد الأوامر المحلي</h2>
+              <p>يبحث في نسخة المكتبة المحفوظة ويجهّز المسودات، من دون Gemini أو مفاتيح أو طلبات Vidmoly جديدة.</p>
             </div>
-            <span className="ai-memory-count">{memory.rules?.length || 0}/60 قاعدة</span>
+            <span className="ai-memory-count">مجاني</span>
           </div>
-          <form className="ai-memory-add" onSubmit={addRule}>
-            <input
-              type="text"
-              value={newRule}
-              onChange={(e) => setNewRule(e.target.value)}
-              placeholder="مثال: اكتب العناوين بالعربية وبشكل قصير"
-              maxLength={500}
-              disabled={memorySaving}
-              aria-label="قاعدة جديدة للمساعد"
-            />
-            <button type="submit" className="btn btn-ai" disabled={memorySaving || !newRule.trim()}>احفظ كقاعدة</button>
-          </form>
-          {memoryError && <div className="ai-memory-error">{memoryError}</div>}
-          {memoryLoading ? (
-            <p className="ai-memory-empty">جارٍ تحميل قواعدك…</p>
-          ) : memory.rules?.length ? (
-            <ul className="ai-memory-rules">
-              {memory.rules.map((rule) => (
-                <li key={rule.id} className="ai-memory-rule">
-                  {editingId === rule.id ? (
-                    <form className="ai-memory-edit" onSubmit={updateRule}>
-                      <input value={editingText} onChange={(e) => setEditingText(e.target.value)} maxLength={500} autoFocus />
-                      <button type="submit" disabled={memorySaving || !editingText.trim()} aria-label="حفظ تعديل القاعدة"><i className="fas fa-check" /></button>
-                      <button type="button" onClick={() => { setEditingId(null); setEditingText(''); }} disabled={memorySaving} aria-label="إلغاء التعديل"><i className="fas fa-xmark" /></button>
-                    </form>
-                  ) : (
-                    <>
-                      <span>{rule.text}</span>
-                      <div className="ai-memory-actions">
-                        <button type="button" onClick={() => { setEditingId(rule.id); setEditingText(rule.text); }} disabled={memorySaving} aria-label="تعديل القاعدة"><i className="fas fa-pen" /></button>
-                        <button type="button" onClick={() => deleteRule(rule.id)} disabled={memorySaving} aria-label="حذف القاعدة"><i className="fas fa-trash" /></button>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="ai-memory-empty">لا توجد قواعد محفوظة بعد. أضف أول تفضيل ليبدأ المساعد في فهم طريقتك.</p>
-          )}
+          <div className="ai-command-guide">
+            <span><b>بحث:</b> ابحث عن One Piece</span>
+            <span><b>مسودة:</b> جهز نشر الحلقة 1 من One Piece</span>
+            <span><b>تعديل:</b> غير عنوان المسودة إلى ...</span>
+            <span><b>حذف:</b> احذف المسودة</span>
+          </div>
         </section>
+
+        {draft && (
+          <section className="ai-local-draft" aria-label="المسودة المحلية الحالية">
+            <div>
+              <strong>مسودة محلية جاهزة</strong>
+              <p>{draft.title}</p>
+            </div>
+            <button type="button" className="btn btn-ai" onClick={openDraftInContentForm}>
+              افتحها في نموذج النشر
+            </button>
+          </section>
+        )}
+
+        {pendingChange && (
+          <section className="ai-local-confirm" role="alert">
+            <p>{pendingChange.text}</p>
+            <div>
+              <button type="button" className="btn btn-ai" onClick={confirmPendingChange}>تأكيد</button>
+              <button type="button" className="btn" onClick={() => setPendingChange(null)}>إلغاء</button>
+            </div>
+          </section>
+        )}
+
         <div className="ai-chat-list" ref={listRef}>
           {messages.length === 0 && (
             <div className="ai-chat-empty">
-              <p>اكتب طلبك، والمساعد ينفذه فعليًا (مش بس يقترح) عن طريق أدوات حقيقية على الموقع.</p>
+              <p>اكتب أمرًا واضحًا لتنفيذه داخل اللوحة. لا ينشر أو يحذف أي محتوى تلقائيًا.</p>
               <div className="ai-chat-hints">
                 {STARTER_HINTS.map((hint) => (
-                  <button type="button" key={hint} className="ai-chat-hint" onClick={() => send(hint)}>
-                    {hint}
-                  </button>
+                  <button type="button" key={hint} className="ai-chat-hint" onClick={() => send(hint)}>{hint}</button>
                 ))}
               </div>
             </div>
           )}
-          {messages.map((m, i) => (
-            <div key={i} className={`ai-chat-msg ai-chat-msg-${m.role}`}>
-              <div className="ai-chat-bubble">{m.text}</div>
-              {m.actions && m.actions.length > 0 && (
-                <div className="ai-action-log">
-                  {m.actions.map((a, j) => (
-                    <ActionLog action={a} key={j} />
-                  ))}
-                </div>
-              )}
+          {messages.map((message, index) => (
+            <div key={index} className={`ai-chat-msg ai-chat-msg-${message.role}`}>
+              <div className="ai-chat-bubble">{message.text}</div>
+              <ResultList results={message.results} />
             </div>
           ))}
-          {sending && (
-            <div className="ai-chat-msg ai-chat-msg-model">
-              <div className="ai-chat-bubble ai-chat-bubble-loading">جارٍ التفكير والتنفيذ...</div>
-            </div>
-          )}
+          {sending && <div className="ai-chat-msg ai-chat-msg-model"><div className="ai-chat-bubble ai-chat-bubble-loading">جارٍ تنفيذ الأمر المحلي...</div></div>}
         </div>
 
         {error && <div className="banner banner-error">{error}</div>}
-
         <form className="ai-chat-input-row" onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="اكتب طلبك هنا..."
-            disabled={sending}
-          />
-          <button type="submit" className="btn btn-ai" disabled={sending || !input.trim()}>
-            <i className="fas fa-paper-plane" />
-          </button>
+          <input type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="مثال: جهز نشر الحلقة 1 من One Piece" disabled={sending} />
+          <button type="submit" className="btn btn-ai" disabled={sending || !input.trim()} aria-label="تنفيذ الأمر"><i className="fas fa-paper-plane" /></button>
         </form>
       </div>
     </Layout>

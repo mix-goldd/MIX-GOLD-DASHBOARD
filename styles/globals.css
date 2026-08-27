@@ -871,6 +871,116 @@ header.topbar-fixed {
   padding: 0;
 }
 
+.ai-command-guide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.ai-command-guide span {
+  padding: 6px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.ai-command-guide b {
+  color: var(--text);
+}
+
+.ai-local-draft,
+.ai-local-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 71, 87, 0.42);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 71, 87, 0.07);
+}
+
+.ai-local-draft p,
+.ai-local-confirm p {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
+.ai-local-confirm {
+  display: block;
+  border-color: rgba(255, 190, 92, 0.5);
+  background: rgba(255, 190, 92, 0.08);
+}
+
+.ai-local-confirm > div {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ai-local-confirm .btn:not(.btn-ai) {
+  border-color: var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.ai-local-results {
+  width: 100%;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ai-local-results li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.ai-local-results li:last-child {
+  border-bottom: 0;
+}
+
+.ai-local-results strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-local-results span {
+  flex: 0 0 auto;
+  color: var(--text-dim);
+}
+
+@media (max-width: 560px) {
+  .ai-local-draft {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ai-local-draft .btn {
+    width: 100%;
+  }
+
+  .ai-local-results li {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+}
+
 table {
   width: 100%;
   border-collapse: collapse;

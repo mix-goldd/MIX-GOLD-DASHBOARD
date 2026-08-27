@@ -175,7 +175,7 @@ export default function Layout({ title, session, children }) {
     { href: '/dashboard/statistics', label: label('statistics', 'إحصائيات المحتوى') },
     { href: '/dashboard/content-manager', label: label('contentManager', 'مدير المحتوى') },
     { href: '/dashboard/comments', label: label('comments', 'التعليقات') },
-    { href: '/dashboard/ai-chat', label: label('aiChat', '✨ مساعد الذكاء الاصطناعي') },
+    { href: '/dashboard/ai-chat', label: label('aiChat', 'مساعد الأوامر المحلي') },
     { href: '/dashboard/settings', label: label('settings', 'الإعدادات') },
   ];
   if (session?.role === 'admin') {
