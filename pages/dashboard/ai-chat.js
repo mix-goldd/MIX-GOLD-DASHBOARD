@@ -78,13 +78,19 @@ function formatFetchedAt(value) {
 
 function SynopsisCard({ synopsis }) {
   if (!synopsis?.synopsis) return null;
+  const isEpisode = Boolean(synopsis.episode);
   return (
     <section className="ai-synopsis-result" aria-label="ملخص القصة من المصدر العام">
       <div className="ai-synopsis-result-head">
         <strong>{synopsis.title}{synopsis.episode ? ` — الحلقة ${synopsis.episode}` : ''}</strong>
         <span>{synopsis.cached ? 'من نتيجة حديثة' : 'جُلب الآن'}</span>
       </div>
-      <p>{synopsis.synopsis}</p>
+      <p className="ai-synopsis-result-context">
+        {synopsis.isTruncated
+          ? 'هذا مقتطف حرفي من النص المنشور في المصدر. افتح المصدر لقراءة النص كاملًا.'
+          : `بناءً على طلبك، هذا هو النص الحرفي المنشور ل${isEpisode ? `ملخص الحلقة ${synopsis.episode}` : 'ملخص القصة'}، وليس ملخصًا مولدًا.`}
+      </p>
+      <blockquote className="ai-synopsis-quote">{synopsis.synopsis}</blockquote>
       <div className="ai-synopsis-result-meta">
         <span>المصدر: <b>{synopsis.sourceName || 'السينما.كوم'}</b></span>
         <span>تاريخ الجلب: {formatFetchedAt(synopsis.fetchedAt)}</span>
@@ -233,7 +239,7 @@ export default function LocalCommandAssistant({ session }) {
       if (addToConversation) {
         setMessages((current) => [...current, {
           role: 'model',
-          text: `هذا مقتطف ملخص ${data.episode ? `الحلقة ${data.episode} من ` : ''}«${data.title}» من المصدر العام:`,
+          text: `تم العثور على ${data.isTruncated ? 'مقتطف حرفي' : 'النص الحرفي'} لملخص ${data.episode ? `الحلقة ${data.episode} من ` : ''}«${data.title}» كما هو منشور في ${data.sourceName || 'السينما.كوم'}:`,
           action: 'external-synopsis',
           synopsis: data,
         }]);

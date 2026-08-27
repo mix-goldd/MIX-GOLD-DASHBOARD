@@ -93,7 +93,7 @@ describe('Elcinema synopsis parser', () => {
     }))).rejects.toMatchObject({ code: 'SOURCE_RESPONSE_TOO_LARGE' });
   });
 
-  it('looks up an episode with two bounded public page reads and returns only the required fields', async () => {
+  it('looks up an episode with two bounded public page reads and marks whether the displayed source text was trimmed', async () => {
     const calls = [];
     const result = await lookupElcinemaSynopsis({ title: 'العتاولة', episode: 1 }, {
       fetchImpl: async (url) => {
@@ -109,12 +109,13 @@ describe('Elcinema synopsis parser', () => {
     expect(result).toMatchObject({
       title: 'مسلسل العتاولة',
       episode: 1,
+      isTruncated: false,
       sourceName: 'السينما.كوم',
       sourceUrl: 'https://elcinema.com/work/2082898/episodes/7139399',
     });
     expect(result.synopsis).toContain('خضر');
     expect(result.synopsis.length).toBeLessThanOrEqual(MAX_SYNOPSIS_LENGTH);
-    expect(Object.keys(result).sort()).toEqual(['episode', 'fetchedAt', 'sourceName', 'sourceUrl', 'synopsis', 'title']);
+    expect(Object.keys(result).sort()).toEqual(['episode', 'fetchedAt', 'isTruncated', 'sourceName', 'sourceUrl', 'synopsis', 'title']);
   });
 });
 

@@ -28,6 +28,8 @@ describe('Local command assistant', () => {
     expect(parseLocalCommand('ملخص العتاولة الحلقة 1')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: 1 });
     expect(parseLocalCommand('ملخص قصة مسلسل العتاولة')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: null });
     expect(parseLocalCommand('الحلقة 1 من مسلسل العتاولة')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: 1 });
+    expect(parseLocalCommand('عاوز ملخص الحلقة الأولى من العتاولة من السينما.كوم')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: 1 });
+    expect(parseLocalCommand('ملخص العتاولة الحلقة الثانية من موقع السينما كوم')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: 2 });
   });
 
   it('returns a help response for unspecified language instead of guessing', () => {
@@ -78,6 +80,14 @@ describe('Local command assistant', () => {
     expect(source).toContain('confirmPendingChange');
     expect(source).toContain("window.sessionStorage.setItem('mix_gold_local_post_draft_v1'");
     expect(source).toContain("window.location.assign('/dashboard/content')");
+  });
+
+  it('renders public synopsis answers as a sourced quote rather than generated content', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'pages', 'dashboard', 'ai-chat.js'), 'utf8');
+    expect(source).toContain('ai-synopsis-quote');
+    expect(source).toContain('ليس ملخصًا مولدًا');
+    expect(source).toContain("data.isTruncated ? 'مقتطف حرفي' : 'النص الحرفي'");
+    expect(source).toContain('فتح المصدر');
   });
 
   it('does not retain a runtime Gemini client after the local replacement', () => {

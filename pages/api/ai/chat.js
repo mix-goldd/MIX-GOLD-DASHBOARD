@@ -87,7 +87,7 @@ export default async function handler(req, res) {
   }
   if (parsed.type === 'external-synopsis') {
     return res.status(200).json({
-      text: `سأبحث عن ملخص ${parsed.episode ? `الحلقة ${parsed.episode} من ` : ''}«${parsed.title}» في مصدر عام منفصل. لن أقرأ مكتبة Vidmoly ولن أُنشئ مسودة أو منشورًا.`,
+      text: `جارٍ التحقق من النص المنشور لـ${parsed.episode ? `الحلقة ${parsed.episode} من ` : ''}«${parsed.title}» في مصدر عام مستقل. لن أقرأ مكتبة Vidmoly ولن أُنشئ مسودة أو منشورًا.`,
       action: 'external-synopsis',
       synopsisRequest: { title: parsed.title, episode: parsed.episode || undefined },
       learned,

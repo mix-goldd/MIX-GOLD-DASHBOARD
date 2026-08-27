@@ -892,6 +892,24 @@ header.topbar-fixed {
   white-space: pre-line;
 }
 
+.ai-synopsis-result-context {
+  color: var(--text-dim) !important;
+  font-size: 12px !important;
+}
+
+.ai-synopsis-quote {
+  margin: 10px 0 12px;
+  padding: 12px 14px;
+  border: 0;
+  border-inline-start: 3px solid #2b9bd8;
+  border-radius: 6px;
+  background: rgba(24, 91, 128, 0.18);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.9;
+  white-space: pre-line;
+}
+
 .ai-synopsis-result-meta {
   flex-wrap: wrap;
   justify-content: flex-start;
