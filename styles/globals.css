@@ -794,6 +794,233 @@ header.topbar-fixed {
   color: var(--text);
 }
 
+.ai-training-progress {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(255, 71, 87, 0.28);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 71, 87, 0.055);
+}
+
+.ai-training-progress > div:first-child,
+.ai-training-library-head,
+.ai-training-subhead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ai-training-progress span,
+.ai-training-progress p,
+.ai-training-pack p,
+.ai-training-subhead p,
+.ai-training-library-head span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.ai-training-progress strong {
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.ai-training-progress p,
+.ai-training-pack p,
+.ai-training-subhead p {
+  margin: 7px 0 0;
+  line-height: 1.55;
+}
+
+.ai-training-progress-track {
+  height: 6px;
+  margin-top: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.ai-training-progress-track span {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #ff9da6);
+  transition: width 180ms var(--ease-out, ease-out);
+}
+
+.ai-training-pack {
+  margin-top: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ai-training-pack summary {
+  padding: 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ai-training-pack p {
+  padding: 0 10px 8px;
+}
+
+.ai-training-pack ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 6px;
+  max-height: 244px;
+  margin: 0;
+  padding: 0 10px 10px;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ai-training-pack li {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.ai-training-pack b {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-training-pack li span {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.ai-training-pending {
+  margin-top: 12px;
+  padding: 10px;
+  border: 1px solid rgba(245, 186, 73, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(245, 186, 73, 0.055);
+}
+
+.ai-training-subhead h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.ai-training-pending > ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 384px;
+  margin: 10px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.ai-training-pending > ul > li {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.55fr) minmax(0, 1fr);
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid rgba(245, 186, 73, 0.19);
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.13);
+}
+
+.ai-training-pending-copy,
+.ai-training-pending-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ai-training-pending-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-training-pending-copy span {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.ai-training-pending-controls input,
+.ai-training-pending-controls select,
+.ai-training-library-head input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 8px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.ai-training-pending-controls select {
+  height: 34px;
+}
+
+.ai-training-pending-controls .ai-training-actions {
+  align-items: center;
+}
+
+.ai-training-library {
+  margin-top: 12px;
+}
+
+.ai-training-library-head label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.ai-training-library-head > span {
+  flex: 0 0 auto;
+  padding-bottom: 7px;
+}
+
+.ai-training-list {
+  max-height: 360px;
+}
+
+.ai-training-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 9px;
+}
+
+.ai-training-pagination .btn {
+  min-height: 32px;
+  padding: 0 11px;
+  font-size: 11px;
+}
+
+.ai-training-pagination span {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
 .ai-training-test {
   display: flex;
   gap: 8px;
@@ -878,6 +1105,18 @@ header.topbar-fixed {
 
   .ai-training-actions .btn {
     min-height: 36px;
+  }
+
+  .ai-training-pending > ul > li {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-training-library-head {
+    align-items: flex-end;
+  }
+
+  .ai-training-pack ul {
+    grid-template-columns: 1fr;
   }
 }
 

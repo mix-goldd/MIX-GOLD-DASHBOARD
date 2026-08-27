@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../../components/Layout';
 import { getSessionFromReq } from '../../lib/auth';
 
@@ -22,6 +22,8 @@ const TRAINING_ACTIONS = {
 };
 
 const EMPTY_TRAINING_FORM = { phrase: '', action: 'search', query: '', testCommand: '' };
+const TRAINING_PAGE_SIZE = 25;
+const EMPTY_PROGRESS = { target: 1000, confirmed: 0, pending: 0, builtIn: 0, actionCoverage: 0, actionTarget: 3, percent: 0, level: 'بداية', goalReached: false };
 
 function ResultList({ results }) {
   if (!Array.isArray(results) || !results.length) return null;
@@ -45,33 +47,46 @@ export default function LocalCommandAssistant({ session }) {
   const [draft, setDraft] = useState(null);
   const [pendingChange, setPendingChange] = useState(null);
   const [training, setTraining] = useState([]);
+  const [pendingTraining, setPendingTraining] = useState([]);
+  const [builtInTraining, setBuiltInTraining] = useState([]);
+  const [trainingProgress, setTrainingProgress] = useState(EMPTY_PROGRESS);
   const [trainingForm, setTrainingForm] = useState(EMPTY_TRAINING_FORM);
+  const [pendingDecisions, setPendingDecisions] = useState({});
   const [editingTrainingId, setEditingTrainingId] = useState(null);
   const [trainingLoading, setTrainingLoading] = useState(true);
   const [trainingSaving, setTrainingSaving] = useState(false);
   const [trainingError, setTrainingError] = useState(null);
+  const [trainingSearch, setTrainingSearch] = useState('');
+  const [trainingPage, setTrainingPage] = useState(1);
   const listRef = useRef(null);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, sending, pendingChange]);
 
-  useEffect(() => {
-    let active = true;
-    async function loadTraining() {
-      try {
-        const res = await fetch('/api/ai/training');
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'تعذر تحميل عبارات التدريب المحلية.');
-        if (active) setTraining(data.training?.examples || []);
-      } catch (err) {
-        if (active) setTrainingError(err.message);
-      } finally {
-        if (active) setTrainingLoading(false);
-      }
+  function applyTrainingPayload(nextTraining) {
+    setTraining(Array.isArray(nextTraining?.examples) ? nextTraining.examples : []);
+    setPendingTraining(Array.isArray(nextTraining?.pending) ? nextTraining.pending : []);
+    setBuiltInTraining(Array.isArray(nextTraining?.builtInExamples) ? nextTraining.builtInExamples : []);
+    setTrainingProgress({ ...EMPTY_PROGRESS, ...(nextTraining?.progress || {}) });
+  }
+
+  async function loadTraining({ showLoading = true } = {}) {
+    if (showLoading) setTrainingLoading(true);
+    try {
+      const res = await fetch('/api/ai/training');
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر تحميل عبارات التدريب المحلية.');
+      applyTrainingPayload(data.training);
+    } catch (err) {
+      setTrainingError(err.message);
+    } finally {
+      if (showLoading) setTrainingLoading(false);
     }
+  }
+
+  useEffect(() => {
     loadTraining();
-    return () => { active = false; };
   }, []);
 
   async function send(text) {
@@ -102,7 +117,9 @@ export default function LocalCommandAssistant({ session }) {
         text: data.text || 'تم تنفيذ الأمر.',
         results: data.results || [],
         learned: Boolean(data.learned),
+        builtIn: Boolean(data.builtIn),
       }]);
+      if (data.suggestionRecorded) loadTraining({ showLoading: false });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -142,7 +159,7 @@ export default function LocalCommandAssistant({ session }) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'تعذر حفظ عبارة التدريب.');
-      setTraining(data.training?.examples || []);
+      applyTrainingPayload(data.training);
       resetTrainingForm();
     } catch (err) {
       setTrainingError(err.message);
@@ -169,7 +186,7 @@ export default function LocalCommandAssistant({ session }) {
       const res = await fetch(`/api/ai/training?id=${encodeURIComponent(example.id)}`, { method: 'DELETE' });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'تعذر حذف عبارة التدريب.');
-      setTraining(data.training?.examples || []);
+      applyTrainingPayload(data.training);
       if (editingTrainingId === example.id) resetTrainingForm();
     } catch (err) {
       setTrainingError(err.message);
@@ -184,6 +201,66 @@ export default function LocalCommandAssistant({ session }) {
     }
     send(trainingForm.testCommand);
   }
+
+  function getPendingDecision(candidate) {
+    return pendingDecisions[candidate.id] || { phrase: candidate.phrase, action: 'list', query: '' };
+  }
+
+  function updatePendingDecision(candidate, field, value) {
+    setPendingDecisions((current) => ({
+      ...current,
+      [candidate.id]: { phrase: candidate.phrase, action: 'list', query: '', ...(current[candidate.id] || {}), [field]: value },
+    }));
+  }
+
+  async function approvePendingTraining(candidate) {
+    const decision = getPendingDecision(candidate);
+    setTrainingError(null);
+    setTrainingSaving(true);
+    try {
+      const res = await fetch('/api/ai/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operation: 'approve-pending', id: candidate.id, ...decision }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر اعتماد العبارة المقترحة.');
+      applyTrainingPayload(data.training);
+      setPendingDecisions((current) => {
+        const next = { ...current };
+        delete next[candidate.id];
+        return next;
+      });
+    } catch (err) {
+      setTrainingError(err.message);
+    } finally {
+      setTrainingSaving(false);
+    }
+  }
+
+  async function dismissPendingTraining(candidate) {
+    if (!window.confirm(`إخفاء العبارة «${candidate.phrase}» من قائمة المراجعة؟ لن يؤثر ذلك في الفيديوهات أو المنشورات.`)) return;
+    setTrainingError(null);
+    try {
+      const res = await fetch(`/api/ai/training?id=${encodeURIComponent(candidate.id)}&operation=dismiss-pending`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر إخفاء العبارة المقترحة.');
+      applyTrainingPayload(data.training);
+    } catch (err) {
+      setTrainingError(err.message);
+    }
+  }
+
+  const filteredTraining = useMemo(() => {
+    const needle = trainingSearch.trim().toLowerCase();
+    if (!needle) return training;
+    return training.filter((example) => [example.phrase, example.query, TRAINING_ACTIONS[example.action]]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(needle)));
+  }, [training, trainingSearch]);
+  const visibleTrainingPage = Math.max(1, Math.ceil(filteredTraining.length / TRAINING_PAGE_SIZE));
+  const activeTrainingPage = Math.min(trainingPage, visibleTrainingPage);
+  const visibleTraining = filteredTraining.slice((activeTrainingPage - 1) * TRAINING_PAGE_SIZE, activeTrainingPage * TRAINING_PAGE_SIZE);
 
   function confirmPendingChange() {
     if (!pendingChange) return;
@@ -227,10 +304,27 @@ export default function LocalCommandAssistant({ session }) {
           <div className="ai-memory-head">
             <div>
               <h2 id="local-training-title"><i className="fas fa-book-open" /> علّم المنفذ عبارة</h2>
-              <p>احفظ اختصارًا يطابق حرفيًا بعد توحيد المسافات والرموز. هذا ليس نموذج ذكاء اصطناعي ولا يمنح صلاحيات جديدة.</p>
+              <p>العبارات المؤكدة تظهر هنا في حسابك. الحزمة الجاهزة تعمل محليًا، وأي عبارة لا تُفهم تُضاف للمراجعة فقط حتى تحدد معناها.</p>
             </div>
-            <span className="ai-memory-count">{training.length}/60</span>
+            <span className="ai-memory-count">{trainingProgress.confirmed}/{trainingProgress.target}</span>
           </div>
+
+          <div className="ai-training-progress" aria-label="مستوى التدريب المحلي">
+            <div>
+              <span>المستوى: <b>{trainingProgress.level}</b></span>
+              <strong>{trainingProgress.percent}%</strong>
+            </div>
+            <div className="ai-training-progress-track" aria-hidden="true"><span style={{ width: `${trainingProgress.percent}%` }} /></div>
+            <p>{trainingProgress.confirmed} عبارة مؤكدة من هدف {trainingProgress.target}، وتغطية {trainingProgress.actionCoverage}/{trainingProgress.actionTarget} إجراءات آمنة.</p>
+          </div>
+
+          <details className="ai-training-pack">
+            <summary>حزمة الاختصارات الجاهزة ({builtInTraining.length})</summary>
+            <p>تعمل فورًا ولا تُحتسب ضمن هدف عباراتك المؤكدة. يمكنك رؤية كل عبارة هنا قبل استخدامها.</p>
+            <ul>
+              {builtInTraining.map((example) => <li key={example.id}><b>{example.phrase}</b><span>{TRAINING_ACTIONS[example.action]}</span></li>)}
+            </ul>
+          </details>
 
           <form className="ai-training-form" onSubmit={saveTraining}>
             <label>
@@ -283,23 +377,73 @@ export default function LocalCommandAssistant({ session }) {
             <button type="submit" className="btn" disabled={sending}>جرّب</button>
           </form>
 
+          {pendingTraining.length > 0 && (
+            <section className="ai-training-pending" aria-labelledby="pending-training-title">
+              <div className="ai-training-subhead">
+                <div>
+                  <h3 id="pending-training-title">عبارات للمراجعة ({pendingTraining.length})</h3>
+                  <p>هذه عبارات لم تُفهم؛ لن تنفذ شيئًا حتى تعتمد معناها بنفسك.</p>
+                </div>
+              </div>
+              <ul>
+                {pendingTraining.map((candidate) => {
+                  const decision = getPendingDecision(candidate);
+                  const needsQuery = decision.action !== 'list' && !decision.phrase.toLowerCase().includes('{title}');
+                  return (
+                    <li key={candidate.id}>
+                      <div className="ai-training-pending-copy">
+                        <strong>{candidate.phrase}</strong>
+                        <span>ظهرت {candidate.seenCount} {candidate.seenCount === 1 ? 'مرة' : 'مرات'}</span>
+                      </div>
+                      <div className="ai-training-pending-controls">
+                        <input value={decision.phrase} maxLength="160" onChange={(event) => updatePendingDecision(candidate, 'phrase', event.target.value)} aria-label={`عبارة ${candidate.phrase}`} disabled={trainingSaving} />
+                        <select value={decision.action} onChange={(event) => updatePendingDecision(candidate, 'action', event.target.value)} aria-label={`معنى ${candidate.phrase}`} disabled={trainingSaving}>
+                          {Object.entries(TRAINING_ACTIONS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+                        </select>
+                        {needsQuery && <input value={decision.query} maxLength="220" onChange={(event) => updatePendingDecision(candidate, 'query', event.target.value)} placeholder="عنوان ثابت للتنفيذ" aria-label={`عنوان ${candidate.phrase}`} disabled={trainingSaving} />}
+                        <div className="ai-training-actions">
+                          <button type="button" className="btn btn-ai" onClick={() => approvePendingTraining(candidate)} disabled={trainingSaving}>اعتماد</button>
+                          <button type="button" className="btn" onClick={() => dismissPendingTraining(candidate)} disabled={trainingSaving}>إخفاء</button>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
           {trainingError && <div className="ai-memory-error" role="alert">{trainingError}</div>}
           {trainingLoading ? <p className="ai-memory-empty">جارٍ تحميل العبارات المحفوظة...</p> : (
             training.length ? (
-              <ul className="ai-training-list" aria-label="عبارات التدريب المحفوظة">
-                {training.map((example) => (
-                  <li key={example.id}>
-                    <div>
-                      <strong>{example.phrase}</strong>
-                      <span>{TRAINING_ACTIONS[example.action]}{example.query ? `: ${example.query}` : ''}</span>
-                    </div>
-                    <div className="ai-memory-actions">
-                      <button type="button" onClick={() => beginTrainingEdit(example)} aria-label={`تعديل ${example.phrase}`} title="تعديل"><i className="fas fa-pen" /></button>
-                      <button type="button" onClick={() => removeTrainingExample(example)} aria-label={`حذف ${example.phrase}`} title="حذف"><i className="fas fa-trash" /></button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <div className="ai-training-library">
+                <div className="ai-training-library-head">
+                  <label>
+                    ابحث في عباراتك المؤكدة
+                    <input value={trainingSearch} maxLength="160" onChange={(event) => { setTrainingSearch(event.target.value); setTrainingPage(1); }} placeholder="ابحث بالعبارة أو الإجراء" />
+                  </label>
+                  <span>{filteredTraining.length} عبارة</span>
+                </div>
+                {visibleTraining.length ? <ul className="ai-training-list" aria-label="عبارات التدريب المحفوظة">
+                  {visibleTraining.map((example) => (
+                    <li key={example.id}>
+                      <div>
+                        <strong>{example.phrase}</strong>
+                        <span>{TRAINING_ACTIONS[example.action]}{example.query ? `: ${example.query}` : ''}</span>
+                      </div>
+                      <div className="ai-memory-actions">
+                        <button type="button" onClick={() => beginTrainingEdit(example)} aria-label={`تعديل ${example.phrase}`} title="تعديل"><i className="fas fa-pen" /></button>
+                        <button type="button" onClick={() => removeTrainingExample(example)} aria-label={`حذف ${example.phrase}`} title="حذف"><i className="fas fa-trash" /></button>
+                      </div>
+                    </li>
+                  ))}
+                </ul> : <p className="ai-memory-empty">لا توجد نتيجة مطابقة للبحث.</p>}
+                {filteredTraining.length > TRAINING_PAGE_SIZE && <div className="ai-training-pagination" aria-label="صفحات عبارات التدريب">
+                  <button type="button" className="btn" onClick={() => setTrainingPage((current) => Math.max(1, current - 1))} disabled={activeTrainingPage === 1}>السابق</button>
+                  <span>صفحة {activeTrainingPage} من {visibleTrainingPage}</span>
+                  <button type="button" className="btn" onClick={() => setTrainingPage((current) => Math.min(visibleTrainingPage, current + 1))} disabled={activeTrainingPage === visibleTrainingPage}>التالي</button>
+                </div>}
+              </div>
             ) : <p className="ai-memory-empty">لا توجد عبارات محفوظة بعد. أضف اختصارك الأول أعلاه.</p>
           )}
         </section>

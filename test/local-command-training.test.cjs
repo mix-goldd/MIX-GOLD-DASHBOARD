@@ -38,6 +38,7 @@ describe('Local command training', () => {
     expect(alice.examples[0]).toMatchObject({ phrase: 'هات المكتبة', action: 'list', query: null });
     expect(alice.examples[0]).not.toHaveProperty('messages');
     expect((await training.getTraining('alice')).examples).toHaveLength(1);
+    expect((await training.getTraining('alice')).builtInExamples.length).toBeGreaterThan(20);
     expect((await training.getTraining('bob')).examples[0]).toMatchObject({ phrase: 'لقي {title}', action: 'search' });
     expect([...saved.keys()]).toEqual(expect.arrayContaining(['local_command_training_v1:alice', 'local_command_training_v1:bob']));
   });
@@ -77,6 +78,59 @@ describe('Local command training', () => {
     expect(matchTrainedCommand('لقّي', training)).toBeNull();
   });
 
+  it('ships a reviewed local shortcut pack without treating it as a user-confirmed phrase', async () => {
+    const { getTraining, matchTrainedCommand } = require('../lib/localCommandTraining');
+    const training = await getTraining('owner');
+
+    expect(training.examples).toEqual([]);
+    expect(training.builtInExamples.length).toBeGreaterThanOrEqual(25);
+    expect(matchTrainedCommand('هات مكتبتي', training)).toEqual({ type: 'list', trainingId: 'builtin-list-my-library', builtIn: true });
+    expect(matchTrainedCommand('دور على One Piece', training)).toEqual({ type: 'search', query: 'one piece', trainingId: 'builtin-search-find', builtIn: true });
+    expect(matchTrainedCommand('جهزلي الحلقة 1', training)).toEqual({ type: 'prepare-draft', query: 'الحلقة 1', trainingId: 'builtin-draft-prepare-me', builtIn: true });
+  });
+
+  it('supports a thousand confirmed phrases and reports progress without retaining more', () => {
+    const { MAX_TRAINING_EXAMPLES, getTrainingProgress, normalizeTraining } = require('../lib/localCommandTraining');
+    const examples = Array.from({ length: MAX_TRAINING_EXAMPLES + 8 }, (_, index) => ({
+      id: `training-${index}`,
+      phrase: `عبارة ثابتة ${index}`,
+      action: 'list',
+    }));
+    const normalized = normalizeTraining({ examples });
+    const progress = getTrainingProgress(normalized);
+
+    expect(MAX_TRAINING_EXAMPLES).toBe(1000);
+    expect(normalized.examples).toHaveLength(1000);
+    expect(progress).toMatchObject({ target: 1000, confirmed: 1000, percent: 100, goalReached: true, level: 'الهدف مكتمل' });
+  });
+
+  it('records an unrecognized phrase for review, deduplicates it, and requires an explicit safe action to approve it', async () => {
+    const training = require('../lib/localCommandTraining');
+    const first = await training.recordUnrecognizedPhrase('owner', '  قول لي المكتبة  ');
+    const repeated = await training.recordUnrecognizedPhrase('owner', 'قول   لي المكتبة');
+    const pending = (await training.getTraining('owner')).pending[0];
+
+    expect(first.recorded).toBe(true);
+    expect(repeated.recorded).toBe(true);
+    expect(pending).toMatchObject({ phrase: 'قول لي المكتبة', seenCount: 2 });
+    await expect(training.approvePendingPhrase('owner', pending.id, { action: 'delete-video' })).rejects.toThrow('غير مسموح');
+    const approved = await training.approvePendingPhrase('owner', pending.id, { action: 'list' });
+    expect(approved.pending).toEqual([]);
+    expect(approved.examples[0]).toMatchObject({ phrase: 'قول لي المكتبة', action: 'list' });
+  });
+
+  it('does not collect URLs or likely secrets as phrase candidates and keeps pending phrases private', async () => {
+    const training = require('../lib/localCommandTraining');
+    const secretLike = await training.recordUnrecognizedPhrase('alice', 'token abcdefghijklmnopqrstuvwxyz123456');
+    const urlLike = await training.recordUnrecognizedPhrase('alice', 'https://example.com/private');
+    await training.recordUnrecognizedPhrase('alice', 'قول لي المكتبة');
+
+    expect(secretLike.recorded).toBe(false);
+    expect(urlLike.recorded).toBe(false);
+    expect((await training.getTraining('alice')).pending).toHaveLength(1);
+    expect((await training.getTraining('bob')).pending).toEqual([]);
+  });
+
   it('passes trained intents into the existing draft-only command contract', () => {
     const { parseLocalCommand } = require('../lib/localCommandAssistant');
     const parsed = parseLocalCommand('جهز لي One Piece', {
@@ -95,6 +149,7 @@ describe('Local command training', () => {
     expect(source).not.toContain('generateContent(');
     expect(source).not.toContain('fetch(');
     expect(source).not.toContain('vidmoly.');
+    expect(source).toContain('recordUnrecognizedPhrase(session.id, command)');
   });
 
   it('keeps training management limited to local command actions and requires confirmation before removing a saved phrase', () => {
@@ -104,7 +159,12 @@ describe('Local command training', () => {
     expect(apiSource).toContain("req.method === 'POST'");
     expect(apiSource).toContain("req.method === 'PATCH'");
     expect(apiSource).toContain("req.method === 'DELETE'");
+    expect(apiSource).toContain("operation === 'approve-pending'");
+    expect(apiSource).toContain("operation === 'dismiss-pending'");
     expect(pageSource).toContain('window.confirm(');
     expect(pageSource).toContain('فُهمت من عبارة علّمتها');
+    expect(pageSource).toContain('عبارات للمراجعة');
+    expect(pageSource).toContain('حزمة الاختصارات الجاهزة');
+    expect(pageSource).toContain('target: 1000');
   });
 });

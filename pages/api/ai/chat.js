@@ -3,8 +3,8 @@
 const { requireAuth } = require('../../../lib/api-auth');
 const { getDashboardSetting } = require('../../../lib/db');
 const { collectLibraryFiles, findVidmolyLibraryMatch, normalizeText, scoreMatch } = require('../../../lib/vidmolyLibraryMatch');
-const { createLocalDraft, helpText, parseLocalCommand } = require('../../../lib/localCommandAssistant');
-const { getTraining } = require('../../../lib/localCommandTraining');
+const { createLocalDraft, helpText, isUnrecognizedLocalCommand, parseLocalCommand } = require('../../../lib/localCommandAssistant');
+const { getTraining, recordUnrecognizedPhrase } = require('../../../lib/localCommandTraining');
 
 const LIBRARY_SNAPSHOT_KEY = 'vidmoly_library_snapshot_v1';
 
@@ -50,21 +50,40 @@ export default async function handler(req, res) {
   }
   const parsed = parseLocalCommand(command, training);
   const learned = Boolean(parsed.learned);
+  const builtIn = Boolean(parsed.builtIn);
 
-  if (parsed.type === 'help') return res.status(200).json({ text: helpText(), learned, results: [] });
+  let suggestionRecorded = false;
+  if (isUnrecognizedLocalCommand(command, parsed)) {
+    try {
+      const recorded = await recordUnrecognizedPhrase(session.id, command);
+      suggestionRecorded = Boolean(recorded.recorded);
+    } catch (error) {
+      // The command remains a safe help response if optional phrase collection
+      // is unavailable; no command intent is guessed as a fallback.
+      suggestionRecorded = false;
+    }
+  }
+
+  if (parsed.type === 'help') {
+    const text = suggestionRecorded
+      ? `${helpText()} سجّلت عبارتك في «عبارات للمراجعة» لتختار معناها لاحقًا.`
+      : helpText();
+    return res.status(200).json({ text, learned, builtIn, suggestionRecorded, results: [] });
+  }
   if (parsed.type === 'rename-draft') {
-    if (!activeDraft?.title) return res.status(200).json({ text: 'لا توجد مسودة محلية لتعديلها. جهّز منشورًا من فيديو أولًا.', action: 'none', learned, results: [] });
+    if (!activeDraft?.title) return res.status(200).json({ text: 'لا توجد مسودة محلية لتعديلها. جهّز منشورًا من فيديو أولًا.', action: 'none', learned, builtIn, results: [] });
     return res.status(200).json({
       text: `سيُغيَّر عنوان المسودة إلى: ${parsed.title}`,
       action: 'rename-draft',
       learned,
+      builtIn,
       draft: { ...activeDraft, title: parsed.title },
       results: [],
     });
   }
   if (parsed.type === 'delete-draft') {
-    if (!activeDraft?.title) return res.status(200).json({ text: 'لا توجد مسودة محلية لحذفها.', action: 'none', learned, results: [] });
-    return res.status(200).json({ text: `سيُحذف تجهيز المسودة «${activeDraft.title}» فقط، ولن يُحذف أي فيديو أو منشور منشور.`, action: 'delete-draft', learned, results: [] });
+    if (!activeDraft?.title) return res.status(200).json({ text: 'لا توجد مسودة محلية لحذفها.', action: 'none', learned, builtIn, results: [] });
+    return res.status(200).json({ text: `سيُحذف تجهيز المسودة «${activeDraft.title}» فقط، ولن يُحذف أي فيديو أو منشور منشور.`, action: 'delete-draft', learned, builtIn, results: [] });
   }
 
   let snapshot;
@@ -74,7 +93,7 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'تعذر قراءة نسخة مكتبة الفيديوهات المخزنة.' });
   }
   const files = collectLibraryFiles(snapshot?.payload || snapshot);
-  if (!files.length) return res.status(200).json({ ...snapshotUnavailable(), learned });
+  if (!files.length) return res.status(200).json({ ...snapshotUnavailable(), learned, builtIn });
 
   if (parsed.type === 'list') {
     const results = files.slice(0, 12).map(publicFile);
@@ -82,6 +101,7 @@ export default async function handler(req, res) {
       text: `توجد ${files.length} فيديوهات في النسخة المخزنة محليًا. هذه أحدث ${results.length} عناصر:`,
       action: 'list',
       learned,
+      builtIn,
       results,
     });
   }
@@ -92,19 +112,21 @@ export default async function handler(req, res) {
       text: matches.length ? `وجدت ${matches.length} نتيجة محلية لعبارة «${parsed.query}».` : `لم أجد نتيجة محلية لعبارة «${parsed.query}».`,
       action: 'search',
       learned,
+      builtIn,
       results: matches,
     });
   }
 
   const matched = findVidmolyLibraryMatch(parsed.query, snapshot?.payload || snapshot);
   if (!matched) {
-    return res.status(200).json({ text: `لم أجد فيديو مناسبًا لتجهيز مسودة «${parsed.query}». جرّب أمر بحث باسم أقصر أو أدق.`, action: 'prepare-draft', learned, results: matches });
+    return res.status(200).json({ text: `لم أجد فيديو مناسبًا لتجهيز مسودة «${parsed.query}». جرّب أمر بحث باسم أقصر أو أدق.`, action: 'prepare-draft', learned, builtIn, results: matches });
   }
   const draft = createLocalDraft(matched);
   return res.status(200).json({
     text: `تم تجهيز مسودة محلية من «${draft.title}». لن يُنشأ أو يُنشر أي محتوى حتى تفتح النموذج وتضغط الحفظ بنفسك.`,
     action: 'prepare-draft',
     learned,
+    builtIn,
     draft,
     results: [publicFile(matched)],
   });

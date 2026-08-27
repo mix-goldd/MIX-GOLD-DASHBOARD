@@ -10,6 +10,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ training: await training.getTraining(session.id) });
     }
     if (req.method === 'POST') {
+      if (req.body?.operation === 'approve-pending') {
+        const saved = await training.approvePendingPhrase(session.id, req.body?.id, req.body);
+        return res.status(200).json({ training: saved });
+      }
       const saved = await training.addTrainingExample(session.id, req.body);
       return res.status(201).json({ training: saved });
     }
@@ -19,6 +23,10 @@ export default async function handler(req, res) {
     }
     if (req.method === 'DELETE') {
       const id = req.query?.id || req.body?.id;
+      if (req.query?.operation === 'dismiss-pending' || req.body?.operation === 'dismiss-pending') {
+        const saved = await training.dismissPendingPhrase(session.id, id);
+        return res.status(200).json({ training: saved });
+      }
       const saved = await training.deleteTrainingExample(session.id, id);
       return res.status(200).json({ training: saved });
     }
