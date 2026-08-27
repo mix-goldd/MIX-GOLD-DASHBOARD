@@ -28,7 +28,7 @@ describe('منشور الحلقة الموحد', () => {
   it('maps every unified video record once into the public playable collection', () => {
     const publicSite = read('public/site/index.html');
 
-    expect(publicSite).toContain("const videoPosts = postsRows.filter(p => p.type === 'video').map(p => ({");
+    expect(publicSite).toContain("const videoPosts = postsRows.filter(p => p.type === 'video').map(p => {");
     expect(publicSite).toContain('if (videoPosts.length) characterData = videoPosts;');
   });
 });

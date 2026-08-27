@@ -4251,7 +4251,7 @@
 
         <div id="post-detail" class="post-detail">
             <div class="video-container">
-                <iframe id="post-player-iframe" src="about:blank" title="Video player" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+                <iframe id="vidmoly-player-iframe" src="about:blank" title="Video player" frameborder="0" allowfullscreen allow="autoplay; encrypted-media" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
             </div>
 
             <div class="actions-wrapper">
@@ -5026,12 +5026,12 @@
         }
 
         function clearPostPlayer() {
-            const playerIframe = document.getElementById('post-player-iframe');
+            const playerIframe = document.getElementById('vidmoly-player-iframe');
             if (playerIframe) playerIframe.src = 'about:blank';
         }
 
         function setPostPlayerSource(value) {
-            const playerIframe = document.getElementById('post-player-iframe');
+            const playerIframe = document.getElementById('vidmoly-player-iframe');
             if (!playerIframe) return;
             playerIframe.src = getSafePlayerUrl(value) || 'about:blank';
         }

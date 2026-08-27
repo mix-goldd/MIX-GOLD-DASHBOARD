@@ -85,6 +85,16 @@ export default async function handler(req, res) {
     if (!activeDraft?.title) return res.status(200).json({ text: 'لا توجد مسودة محلية لحذفها.', action: 'none', learned, builtIn, results: [] });
     return res.status(200).json({ text: `سيُحذف تجهيز المسودة «${activeDraft.title}» فقط، ولن يُحذف أي فيديو أو منشور منشور.`, action: 'delete-draft', learned, builtIn, results: [] });
   }
+  if (parsed.type === 'external-synopsis') {
+    return res.status(200).json({
+      text: `سأبحث عن ملخص ${parsed.episode ? `الحلقة ${parsed.episode} من ` : ''}«${parsed.title}» في مصدر عام منفصل. لن أقرأ مكتبة Vidmoly ولن أُنشئ مسودة أو منشورًا.`,
+      action: 'external-synopsis',
+      synopsisRequest: { title: parsed.title, episode: parsed.episode || undefined },
+      learned,
+      builtIn,
+      results: [],
+    });
+  }
 
   let snapshot;
   try {

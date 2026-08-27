@@ -7,7 +7,9 @@
     "build": "NODE_ENV=production next build && node scripts/prepare-deploy-assets.mjs",
     "start": "NODE_ENV=production next start",
     "check": "echo \"Next.js validation is covered by npm run build\"",
-    "test": "vitest run"
+    "test": "npm run test:vitest && npm run test:node",
+    "test:vitest": "vitest run",
+    "test:node": "node --test test/adsterra-earnings-merge.test.cjs test/content-card-rectangle-layout.test.cjs test/domain-routing.test.cjs test/earnings-vidmoly-balance-visibility.test.cjs test/facebook-share-button.test.cjs test/gemini-vercel-env-name.test.cjs test/general-content-labels.test.cjs test/post-publishing-workflow.test.cjs test/statistics-selection-details.test.cjs test/vidmoly-renewal-message.test.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

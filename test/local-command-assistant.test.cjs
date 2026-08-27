@@ -24,6 +24,12 @@ describe('Local command assistant', () => {
     expect(parseLocalCommand('ابحث عن One Piece في مجلد Anime')).toEqual({ type: 'search', query: 'One Piece', filters: { folder: 'Anime' } });
   });
 
+  it('recognizes public synopsis requests before they are collected as unknown local commands', () => {
+    expect(parseLocalCommand('ملخص العتاولة الحلقة 1')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: 1 });
+    expect(parseLocalCommand('ملخص قصة مسلسل العتاولة')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: null });
+    expect(parseLocalCommand('الحلقة 1 من مسلسل العتاولة')).toEqual({ type: 'external-synopsis', title: 'العتاولة', episode: 1 });
+  });
+
   it('returns a help response for unspecified language instead of guessing', () => {
     expect(parseLocalCommand('اكتب وصفًا جميلًا')).toEqual({ type: 'help' });
     expect(helpText()).toContain('ولا أستخدم');

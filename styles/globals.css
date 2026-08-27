@@ -804,6 +804,108 @@ header.topbar-fixed {
   color: var(--text);
 }
 
+.ai-synopsis-search-card {
+  margin-bottom: 12px;
+  padding: 14px;
+  border: 1px solid rgba(104, 211, 145, 0.34);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(17, 56, 45, 0.6), rgba(12, 17, 27, 0.9));
+}
+
+.ai-synopsis-search-card .ai-memory-head h2 i {
+  color: #74d99d;
+}
+
+.ai-synopsis-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(130px, 0.5fr) auto;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.ai-synopsis-search-form label {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.ai-synopsis-search-form input {
+  width: 100%;
+  min-width: 0;
+  height: 39px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
+.ai-synopsis-search-actions {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+}
+
+.ai-synopsis-search-actions .btn {
+  min-height: 39px;
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.ai-synopsis-result {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid rgba(116, 217, 157, 0.24);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.ai-synopsis-result-head,
+.ai-synopsis-result-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ai-synopsis-result-head strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.ai-synopsis-result-head span,
+.ai-synopsis-result-meta {
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.ai-synopsis-result > p {
+  margin: 10px 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-line;
+}
+
+.ai-synopsis-result-meta {
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
+.ai-synopsis-result-meta a {
+  color: #85e5aa;
+  text-decoration: none;
+}
+
+.ai-synopsis-result-meta a:hover {
+  text-decoration: underline;
+}
+
 .ai-training-form {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(190px, 0.8fr);
@@ -1165,6 +1267,14 @@ header.topbar-fixed {
 
   .ai-training-form {
     grid-template-columns: 1fr;
+  }
+
+  .ai-synopsis-search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-synopsis-search-actions {
+    align-items: stretch;
   }
 
   .ai-training-actions .btn {

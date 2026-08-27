@@ -12,6 +12,7 @@ const STARTER_HINTS = [
   'اعرض الفيديوهات',
   'ابحث عن One Piece',
   'جهز نشر الحلقة 1 من One Piece',
+  'ملخص العتاولة الحلقة 1',
   'مساعدة',
 ];
 
@@ -25,6 +26,7 @@ const EMPTY_TRAINING_FORM = { phrase: '', action: 'search', query: '', testComma
 const TRAINING_PAGE_SIZE = 25;
 const EMPTY_PROGRESS = { target: 1000, confirmed: 0, pending: 0, builtIn: 0, actionCoverage: 0, actionTarget: 3, percent: 0, level: 'بداية', goalReached: false };
 const EMPTY_ADVANCED_SEARCH = { query: '', folder: '', sort: 'relevance', minViews: '', minSizeMb: '' };
+const EMPTY_SYNOPSIS_SEARCH = { title: '', episode: '' };
 const SEARCH_SORTS = {
   relevance: 'الأكثر صلة بالعنوان',
   newest: 'الأحدث رفعًا',
@@ -68,6 +70,30 @@ function ResultList({ results, detailed = false }) {
   );
 }
 
+function formatFetchedAt(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'الآن';
+  return date.toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+function SynopsisCard({ synopsis }) {
+  if (!synopsis?.synopsis) return null;
+  return (
+    <section className="ai-synopsis-result" aria-label="ملخص القصة من المصدر العام">
+      <div className="ai-synopsis-result-head">
+        <strong>{synopsis.title}{synopsis.episode ? ` — الحلقة ${synopsis.episode}` : ''}</strong>
+        <span>{synopsis.cached ? 'من نتيجة حديثة' : 'جُلب الآن'}</span>
+      </div>
+      <p>{synopsis.synopsis}</p>
+      <div className="ai-synopsis-result-meta">
+        <span>المصدر: <b>{synopsis.sourceName || 'السينما.كوم'}</b></span>
+        <span>تاريخ الجلب: {formatFetchedAt(synopsis.fetchedAt)}</span>
+        {synopsis.sourceUrl && <a href={synopsis.sourceUrl} target="_blank" rel="noreferrer">فتح المصدر <i className="fas fa-arrow-up-right-from-square" aria-hidden="true" /></a>}
+      </div>
+    </section>
+  );
+}
+
 export default function LocalCommandAssistant({ session }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -88,6 +114,10 @@ export default function LocalCommandAssistant({ session }) {
   const [trainingSearch, setTrainingSearch] = useState('');
   const [trainingPage, setTrainingPage] = useState(1);
   const [advancedSearch, setAdvancedSearch] = useState(EMPTY_ADVANCED_SEARCH);
+  const [synopsisSearch, setSynopsisSearch] = useState(EMPTY_SYNOPSIS_SEARCH);
+  const [synopsisResult, setSynopsisResult] = useState(null);
+  const [synopsisLoading, setSynopsisLoading] = useState(false);
+  const [synopsisError, setSynopsisError] = useState(null);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -150,6 +180,7 @@ export default function LocalCommandAssistant({ session }) {
         learned: Boolean(data.learned),
         builtIn: Boolean(data.builtIn),
       }]);
+      if (data.synopsisRequest) await lookupSynopsis(data.synopsisRequest, { addToConversation: true });
       if (data.suggestionRecorded) loadTraining({ showLoading: false });
     } catch (err) {
       setError(err.message);
@@ -171,6 +202,56 @@ export default function LocalCommandAssistant({ session }) {
     event.preventDefault();
     const query = advancedSearch.query.trim();
     send(query ? `ابحث عن ${query}` : 'بحث متقدم في المكتبة', { advancedSearch });
+  }
+
+  function updateSynopsisSearch(field, value) {
+    setSynopsisSearch((current) => ({ ...current, [field]: value }));
+  }
+
+  async function lookupSynopsis(request, { addToConversation = false } = {}) {
+    const title = typeof request?.title === 'string' ? request.title.trim() : '';
+    const episode = request?.episode === undefined || request?.episode === null ? '' : String(request.episode).trim();
+    if (!title) {
+      const message = 'اكتب اسم المسلسل أو الفيلم أولًا.';
+      setSynopsisError(message);
+      if (addToConversation) setMessages((current) => [...current, { role: 'model', text: message, action: 'external-synopsis' }]);
+      return null;
+    }
+    setSynopsisLoading(true);
+    setSynopsisError(null);
+    setSynopsisResult(null);
+    setSynopsisSearch({ title, episode });
+    try {
+      const res = await fetch('/api/ai/external-synopsis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, ...(episode ? { episode } : {}) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر البحث في المصدر العام.');
+      setSynopsisResult(data);
+      if (addToConversation) {
+        setMessages((current) => [...current, {
+          role: 'model',
+          text: `هذا مقتطف ملخص ${data.episode ? `الحلقة ${data.episode} من ` : ''}«${data.title}» من المصدر العام:`,
+          action: 'external-synopsis',
+          synopsis: data,
+        }]);
+      }
+      return data;
+    } catch (err) {
+      const message = err.message || 'تعذر البحث في المصدر العام.';
+      setSynopsisError(message);
+      if (addToConversation) setMessages((current) => [...current, { role: 'model', text: message, action: 'external-synopsis' }]);
+      return null;
+    } finally {
+      setSynopsisLoading(false);
+    }
+  }
+
+  function submitSynopsisSearch(event) {
+    event.preventDefault();
+    lookupSynopsis(synopsisSearch);
   }
 
   function updateTrainingField(field, value) {
@@ -380,6 +461,33 @@ export default function LocalCommandAssistant({ session }) {
           <p className="ai-advanced-search-note">من مربع الأوامر يمكنك أيضًا كتابة: <b>معلومات عن One Piece</b> أو <b>اعرض أحدث الفيديوهات</b> أو <b>اعرض الأكثر مشاهدة</b>.</p>
         </section>
 
+        <section className="ai-synopsis-search-card" aria-labelledby="synopsis-search-title">
+          <div className="ai-memory-head">
+            <div>
+              <h2 id="synopsis-search-title"><i className="fas fa-book" /> بحث ملخص قصة من السينما.كوم</h2>
+              <p>بحث عام عند الطلب فقط. لا يقرأ مكتبة Vidmoly ولا ينشئ مسودة أو منشورًا.</p>
+            </div>
+            <span className="ai-memory-count">مصدر عام</span>
+          </div>
+          <form className="ai-synopsis-search-form" onSubmit={submitSynopsisSearch}>
+            <label>
+              اسم المسلسل أو الفيلم
+              <input value={synopsisSearch.title} onChange={(event) => updateSynopsisSearch('title', event.target.value)} maxLength="120" placeholder="مثال: العتاولة" disabled={synopsisLoading || sending} />
+            </label>
+            <label>
+              رقم الحلقة (اختياري)
+              <input type="number" min="1" max="999" step="1" value={synopsisSearch.episode} onChange={(event) => updateSynopsisSearch('episode', event.target.value)} placeholder="مثال: 1" disabled={synopsisLoading || sending} />
+            </label>
+            <div className="ai-synopsis-search-actions">
+              <button type="submit" className="btn btn-ai" disabled={synopsisLoading || sending || !synopsisSearch.title.trim()}><i className="fas fa-book-open" /> {synopsisLoading ? 'جارٍ البحث...' : 'ابحث عن الملخص'}</button>
+              <button type="button" className="btn" onClick={() => { setSynopsisSearch(EMPTY_SYNOPSIS_SEARCH); setSynopsisResult(null); setSynopsisError(null); }} disabled={synopsisLoading || sending}>مسح</button>
+            </div>
+          </form>
+          {synopsisError && <div className="ai-memory-error" role="alert">{synopsisError}</div>}
+          <SynopsisCard synopsis={synopsisResult} />
+          <p className="ai-advanced-search-note">يمكنك أيضًا كتابة: <b>ملخص العتاولة الحلقة 1</b> أو <b>ملخص قصة العتاولة</b>. يعرض النظام مقتطفًا قصيرًا مع رابط المصدر.</p>
+        </section>
+
         <section className="ai-training-card" aria-labelledby="local-training-title">
           <div className="ai-memory-head">
             <div>
@@ -566,6 +674,7 @@ export default function LocalCommandAssistant({ session }) {
               <div className="ai-chat-bubble">{message.text}</div>
               {message.learned && <span className="ai-learned-label">فُهمت من عبارة علّمتها</span>}
               <ResultList results={message.results} detailed={message.action === 'advanced-search' || message.action === 'details'} />
+              <SynopsisCard synopsis={message.synopsis} />
             </div>
           ))}
           {sending && <div className="ai-chat-msg ai-chat-msg-model"><div className="ai-chat-bubble ai-chat-bubble-loading">جارٍ تنفيذ الأمر المحلي...</div></div>}
