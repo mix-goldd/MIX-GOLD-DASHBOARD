@@ -42,9 +42,11 @@ describe('Local command assistant', () => {
   it('keeps the command API snapshot-only and provider-free', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'pages', 'api', 'ai', 'chat.js'), 'utf8');
     expect(source).toContain("getDashboardSetting(LIBRARY_SNAPSHOT_KEY)");
+    expect(source).toContain('getTraining(session.id)');
     expect(source).not.toContain("require('../../../lib/gemini')");
     expect(source).not.toContain('generateContent(');
     expect(source).not.toContain('fetch(');
+    expect(source).not.toContain('vidmoly.');
   });
 
   it('removes the metadata-generation call from the content editor', () => {
