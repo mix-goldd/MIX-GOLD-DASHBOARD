@@ -18,17 +18,21 @@ const DEFAULT_SIDEBAR_LABELS = {
   statistics: 'إحصائيات المحتوى',
   contentManager: 'مدير المحتوى',
   comments: 'التعليقات',
-  aiChat: '✨ مساعد الذكاء الاصطناعي',
+  aiChat: 'منفذ الأوامر المحلي',
   settings: 'الإعدادات',
   team: 'Team',
 };
 
 const LEGACY_ANIME_STATISTICS_LABEL = 'إحصائيات الأنمي';
+const LEGACY_AI_CHAT_LABELS = new Set(['✨ مساعد الذكاء الاصطناعي', 'مساعد الذكاء الاصطناعي']);
 
 function normalizeSidebarLabels(labels) {
   const normalized = { ...DEFAULT_SIDEBAR_LABELS, ...(labels && typeof labels === 'object' ? labels : {}) };
   if (normalized.statistics === LEGACY_ANIME_STATISTICS_LABEL) {
     normalized.statistics = DEFAULT_SIDEBAR_LABELS.statistics;
+  }
+  if (LEGACY_AI_CHAT_LABELS.has(normalized.aiChat)) {
+    normalized.aiChat = DEFAULT_SIDEBAR_LABELS.aiChat;
   }
   return normalized;
 }

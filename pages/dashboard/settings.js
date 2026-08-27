@@ -18,7 +18,7 @@ const SIDEBAR_ITEM_HINTS = {
   statistics: 'صفحة "إحصائيات المحتوى"',
   contentManager: 'صفحة "مدير المحتوى"',
   comments: 'صفحة "التعليقات"',
-  aiChat: 'صفحة مساعد الذكاء الاصطناعي',
+  aiChat: 'صفحة «منفذ الأوامر المحلي»',
   settings: 'صفحة "الإعدادات" (اللي انت فيها دلوقتي)',
   team: 'صفحة "Team" (تظهر للأدمن بس)',
 };
@@ -251,7 +251,7 @@ export default function Settings({ session }) {
                   {apiKeys.map((key) => (
                     <tr key={key.id}>
                       <td><span className="api-key-mask"><i className="fas fa-key" /> {key.label} ·••••</span></td>
-                      <td>{key.provider === 'vidmoly' ? 'Vidmoly' : 'Gemini'}</td>
+                      <td>Vidmoly</td>
                       <td>{key.dailyRequests} / {key.dailyLimit}</td>
                       <td>{key.minuteLimit ? `${key.minuteRequests} / ${key.minuteLimit}` : '—'}</td>
                       <td><span className={`api-key-state api-key-state-${key.state}`}>{statusLabel(key)}</span></td>

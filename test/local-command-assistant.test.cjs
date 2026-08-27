@@ -64,4 +64,12 @@ describe('Local command assistant', () => {
   it('does not retain a runtime Gemini client after the local replacement', () => {
     expect(fs.existsSync(path.join(__dirname, '..', 'lib', 'gemini.js'))).toBe(false);
   });
+
+  it('keeps quota status and saved navigation labels free of Gemini configuration', () => {
+    const keyManager = fs.readFileSync(path.join(__dirname, '..', 'lib', 'apiKeyManager.js'), 'utf8');
+    const settingsApi = fs.readFileSync(path.join(__dirname, '..', 'pages', 'api', 'dashboard-settings.js'), 'utf8');
+    expect(keyManager).not.toContain('GEMINI_API_KEY');
+    expect(settingsApi).toContain("aiChat: 'منفذ الأوامر المحلي'");
+    expect(settingsApi).toContain('LEGACY_AI_CHAT_LABELS');
+  });
 });
