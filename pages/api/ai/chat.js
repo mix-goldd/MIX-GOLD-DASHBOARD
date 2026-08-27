@@ -2,28 +2,25 @@
 // Vidmoly library snapshot and never asks Gemini or Vidmoly for fresh data.
 const { requireAuth } = require('../../../lib/api-auth');
 const { getDashboardSetting } = require('../../../lib/db');
-const { collectLibraryFiles, findVidmolyLibraryMatch, normalizeText, scoreMatch } = require('../../../lib/vidmolyLibraryMatch');
+const { collectLibraryFiles, findAdvancedLibraryMatches, findVidmolyLibraryMatch, getLibraryItemDetails } = require('../../../lib/vidmolyLibraryMatch');
 const { createLocalDraft, helpText, isUnrecognizedLocalCommand, parseLocalCommand } = require('../../../lib/localCommandAssistant');
 const { getTraining, recordUnrecognizedPhrase } = require('../../../lib/localCommandTraining');
 
 const LIBRARY_SNAPSHOT_KEY = 'vidmoly_library_snapshot_v1';
 
 function publicFile(item) {
-  return {
-    title: item.title || item.name || item.file_title || item.file_name || 'بدون عنوان',
-    file_code: item.file_code || item.filecode || item.code || item.fileCode || '',
-    duration: item.length || item.duration || '',
-    thumbnail_url: item.thumb || item.single_img || item.thumbnail_url || '',
-  };
+  return getLibraryItemDetails(item);
 }
 
-function findMatches(query, snapshot, limit = 6) {
-  return collectLibraryFiles(snapshot?.payload || snapshot)
-    .map((item) => ({ item, score: scoreMatch(query, item) }))
-    .filter((entry) => entry.score > 0)
-    .sort((left, right) => right.score - left.score)
-    .slice(0, limit)
-    .map(({ item }) => publicFile(item));
+function getAdvancedSearchInput(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return {
+    query: typeof value.query === 'string' ? value.query : '',
+    folder: typeof value.folder === 'string' ? value.folder : '',
+    sort: typeof value.sort === 'string' ? value.sort : 'relevance',
+    minViews: value.minViews,
+    minSizeMb: value.minSizeMb,
+  };
 }
 
 function snapshotUnavailable() {
@@ -40,6 +37,7 @@ export default async function handler(req, res) {
 
   const command = typeof req.body?.command === 'string' ? req.body.command : '';
   const activeDraft = req.body?.draft && typeof req.body.draft === 'object' ? req.body.draft : null;
+  const requestedAdvancedSearch = getAdvancedSearchInput(req.body?.advancedSearch);
   let training = null;
   try {
     training = await getTraining(session.id);
@@ -48,7 +46,9 @@ export default async function handler(req, res) {
     // its saved setting is temporarily unavailable.
     training = null;
   }
-  const parsed = parseLocalCommand(command, training);
+  const parsed = requestedAdvancedSearch
+    ? { type: 'advanced-search', filters: requestedAdvancedSearch }
+    : parseLocalCommand(command, training);
   const learned = Boolean(parsed.learned);
   const builtIn = Boolean(parsed.builtIn);
 
@@ -106,7 +106,33 @@ export default async function handler(req, res) {
     });
   }
 
-  const matches = findMatches(parsed.query, snapshot);
+  const advanced = findAdvancedLibraryMatches(snapshot?.payload || snapshot, {
+    query: parsed.query || '',
+    ...(parsed.filters || {}),
+  }, parsed.type === 'details' ? 1 : 12);
+  const matches = advanced.results;
+  if (parsed.type === 'advanced-search') {
+    const sortLabels = { relevance: 'الأكثر صلة', newest: 'الأحدث رفعًا', largest: 'الأكبر حجمًا', 'most-viewed': 'الأكثر مشاهدة' };
+    const filterBits = [advanced.filters.folder ? `المجلد «${advanced.filters.folder}»` : '', advanced.filters.minViews ? `على الأقل ${advanced.filters.minViews} مشاهدة` : '', advanced.filters.minSizeMb ? `على الأقل ${advanced.filters.minSizeMb} م.ب` : ''].filter(Boolean);
+    return res.status(200).json({
+      text: matches.length
+        ? `وجدت ${matches.length} نتيجة محلية مرتبة حسب ${sortLabels[advanced.filters.sort] || sortLabels.relevance}${filterBits.length ? `، مع فلتر ${filterBits.join(' و')}` : ''}.`
+        : 'لا توجد نتائج محلية مطابقة للفلاتر المحددة.',
+      action: 'advanced-search',
+      learned,
+      builtIn,
+      results: matches,
+    });
+  }
+  if (parsed.type === 'details') {
+    return res.status(200).json({
+      text: matches.length ? `هذه التفاصيل المخزنة محليًا للفيديو الأقرب إلى «${parsed.query}».` : `لم أجد فيديو محليًا باسم «${parsed.query}».`,
+      action: 'details',
+      learned,
+      builtIn,
+      results: matches,
+    });
+  }
   if (parsed.type === 'search') {
     return res.status(200).json({
       text: matches.length ? `وجدت ${matches.length} نتيجة محلية لعبارة «${parsed.query}».` : `لم أجد نتيجة محلية لعبارة «${parsed.query}».`,

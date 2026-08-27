@@ -15,6 +15,15 @@ describe('Local command assistant', () => {
     expect(parseLocalCommand('احذف المسودة')).toEqual({ type: 'delete-draft' });
   });
 
+  it('parses deterministic detailed-information and advanced-sort commands', () => {
+    expect(parseLocalCommand('معلومات عن One Piece')).toEqual({ type: 'details', query: 'One Piece' });
+    expect(parseLocalCommand('تفاصيل الفيديو Bleach')).toEqual({ type: 'details', query: 'Bleach' });
+    expect(parseLocalCommand('اعرض أحدث الفيديوهات')).toEqual({ type: 'advanced-search', filters: { sort: 'newest' } });
+    expect(parseLocalCommand('اعرض أكبر الملفات')).toEqual({ type: 'advanced-search', filters: { sort: 'largest' } });
+    expect(parseLocalCommand('اعرض الأكثر مشاهدة')).toEqual({ type: 'advanced-search', filters: { sort: 'most-viewed' } });
+    expect(parseLocalCommand('ابحث عن One Piece في مجلد Anime')).toEqual({ type: 'search', query: 'One Piece', filters: { folder: 'Anime' } });
+  });
+
   it('returns a help response for unspecified language instead of guessing', () => {
     expect(parseLocalCommand('اكتب وصفًا جميلًا')).toEqual({ type: 'help' });
     expect(helpText()).toContain('ولا أستخدم');
@@ -47,6 +56,8 @@ describe('Local command assistant', () => {
     expect(source).not.toContain('generateContent(');
     expect(source).not.toContain('fetch(');
     expect(source).not.toContain('vidmoly.');
+    expect(source).toContain('findAdvancedLibraryMatches');
+    expect(source).toContain('advancedSearch');
   });
 
   it('removes the metadata-generation call from the content editor', () => {

@@ -24,15 +24,44 @@ const TRAINING_ACTIONS = {
 const EMPTY_TRAINING_FORM = { phrase: '', action: 'search', query: '', testCommand: '' };
 const TRAINING_PAGE_SIZE = 25;
 const EMPTY_PROGRESS = { target: 1000, confirmed: 0, pending: 0, builtIn: 0, actionCoverage: 0, actionTarget: 3, percent: 0, level: 'بداية', goalReached: false };
+const EMPTY_ADVANCED_SEARCH = { query: '', folder: '', sort: 'relevance', minViews: '', minSizeMb: '' };
+const SEARCH_SORTS = {
+  relevance: 'الأكثر صلة بالعنوان',
+  newest: 'الأحدث رفعًا',
+  largest: 'الأكبر حجمًا',
+  'most-viewed': 'الأكثر مشاهدة',
+};
 
-function ResultList({ results }) {
+function formatFileSize(bytes) {
+  const value = Number(bytes);
+  if (!Number.isFinite(value) || value <= 0) return 'غير متاح';
+  const units = ['بايت', 'ك.ب', 'م.ب', 'ج.ب', 'ت.ب'];
+  const unitIndex = Math.min(Math.floor(Math.log(value) / Math.log(1024)), units.length - 1);
+  const scaled = value / (1024 ** unitIndex);
+  return `${scaled >= 10 || unitIndex === 0 ? Math.round(scaled) : scaled.toFixed(1)} ${units[unitIndex]}`;
+}
+
+function ResultList({ results, detailed = false }) {
   if (!Array.isArray(results) || !results.length) return null;
   return (
-    <ul className="ai-local-results" aria-label="نتائج مكتبة الفيديوهات">
+    <ul className={`ai-local-results${detailed ? ' ai-local-results-detailed' : ''}`} aria-label="نتائج مكتبة الفيديوهات">
       {results.map((item, index) => (
         <li key={`${item.file_code || item.title}-${index}`}>
-          <strong>{item.title}</strong>
-          <span>{item.duration ? `المدة: ${item.duration}` : 'المدة غير متاحة'}</span>
+          <div className="ai-local-result-title">
+            <strong>{item.title}</strong>
+            <span>{item.duration ? `المدة: ${item.duration}` : 'المدة غير متاحة'}</span>
+          </div>
+          {detailed && <div className="ai-local-result-details">
+            <span>المشاهدات: {Number(item.views || 0).toLocaleString('ar-EG')}</span>
+            <span>الحجم: {formatFileSize(item.size)}</span>
+            {item.folder && <span>المجلد: {item.folder}</span>}
+            {item.uploaded && <span>الرفع: {item.uploaded}</span>}
+            {item.file_code && <span>الرمز: {item.file_code}</span>}
+            <div className="ai-local-result-links">
+              {item.playback_url && <a href={item.playback_url} target="_blank" rel="noreferrer">رابط التشغيل</a>}
+              {item.download_url && <a href={item.download_url} target="_blank" rel="noreferrer">رابط التحميل</a>}
+            </div>
+          </div>}
         </li>
       ))}
     </ul>
@@ -58,6 +87,7 @@ export default function LocalCommandAssistant({ session }) {
   const [trainingError, setTrainingError] = useState(null);
   const [trainingSearch, setTrainingSearch] = useState('');
   const [trainingPage, setTrainingPage] = useState(1);
+  const [advancedSearch, setAdvancedSearch] = useState(EMPTY_ADVANCED_SEARCH);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -89,7 +119,7 @@ export default function LocalCommandAssistant({ session }) {
     loadTraining();
   }, []);
 
-  async function send(text) {
+  async function send(text, options = {}) {
     const command = text.trim();
     if (!command || sending) return;
     setError(null);
@@ -100,7 +130,7 @@ export default function LocalCommandAssistant({ session }) {
       const res = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command, draft }),
+        body: JSON.stringify({ command, draft, ...options }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'تعذر تنفيذ الأمر المحلي.');
@@ -116,6 +146,7 @@ export default function LocalCommandAssistant({ session }) {
         role: 'model',
         text: data.text || 'تم تنفيذ الأمر.',
         results: data.results || [],
+        action: data.action || 'none',
         learned: Boolean(data.learned),
         builtIn: Boolean(data.builtIn),
       }]);
@@ -130,6 +161,16 @@ export default function LocalCommandAssistant({ session }) {
   function handleSubmit(event) {
     event.preventDefault();
     send(input);
+  }
+
+  function updateAdvancedSearch(field, value) {
+    setAdvancedSearch((current) => ({ ...current, [field]: value }));
+  }
+
+  function submitAdvancedSearch(event) {
+    event.preventDefault();
+    const query = advancedSearch.query.trim();
+    send(query ? `ابحث عن ${query}` : 'بحث متقدم في المكتبة', { advancedSearch });
   }
 
   function updateTrainingField(field, value) {
@@ -298,6 +339,45 @@ export default function LocalCommandAssistant({ session }) {
             <span><b>تعديل:</b> غير عنوان المسودة إلى ...</span>
             <span><b>حذف:</b> احذف المسودة</span>
           </div>
+        </section>
+
+        <section className="ai-advanced-search-card" aria-labelledby="advanced-search-title">
+          <div className="ai-memory-head">
+            <div>
+              <h2 id="advanced-search-title"><i className="fas fa-search-plus" /> بحث متقدم في المكتبة</h2>
+              <p>ابحث بالعنوان ثم صفِّ النتائج حسب المجلد أو المشاهدات أو الحجم، واعرض البيانات المخزنة محليًا فقط.</p>
+            </div>
+            <span className="ai-memory-count">محلي</span>
+          </div>
+          <form className="ai-advanced-search-form" onSubmit={submitAdvancedSearch}>
+            <label>
+              العنوان أو جزء منه
+              <input value={advancedSearch.query} onChange={(event) => updateAdvancedSearch('query', event.target.value)} maxLength="160" placeholder="مثال: One Piece" disabled={sending} />
+            </label>
+            <label>
+              المجلد (اختياري)
+              <input value={advancedSearch.folder} onChange={(event) => updateAdvancedSearch('folder', event.target.value)} maxLength="100" placeholder="مثال: Anime" disabled={sending} />
+            </label>
+            <label>
+              الترتيب
+              <select value={advancedSearch.sort} onChange={(event) => updateAdvancedSearch('sort', event.target.value)} disabled={sending}>
+                {Object.entries(SEARCH_SORTS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}
+              </select>
+            </label>
+            <label>
+              حد أدنى للمشاهدات
+              <input type="number" min="0" max="1000000000" value={advancedSearch.minViews} onChange={(event) => updateAdvancedSearch('minViews', event.target.value)} placeholder="مثال: 1000" disabled={sending} />
+            </label>
+            <label>
+              حد أدنى للحجم (م.ب)
+              <input type="number" min="0" max="1000000" step="1" value={advancedSearch.minSizeMb} onChange={(event) => updateAdvancedSearch('minSizeMb', event.target.value)} placeholder="مثال: 500" disabled={sending} />
+            </label>
+            <div className="ai-advanced-search-actions">
+              <button type="submit" className="btn btn-ai" disabled={sending}><i className="fas fa-search" /> ابحث الآن</button>
+              <button type="button" className="btn" onClick={() => setAdvancedSearch(EMPTY_ADVANCED_SEARCH)} disabled={sending}>مسح الفلاتر</button>
+            </div>
+          </form>
+          <p className="ai-advanced-search-note">من مربع الأوامر يمكنك أيضًا كتابة: <b>معلومات عن One Piece</b> أو <b>اعرض أحدث الفيديوهات</b> أو <b>اعرض الأكثر مشاهدة</b>.</p>
         </section>
 
         <section className="ai-training-card" aria-labelledby="local-training-title">
@@ -485,7 +565,7 @@ export default function LocalCommandAssistant({ session }) {
             <div key={index} className={`ai-chat-msg ai-chat-msg-${message.role}`}>
               <div className="ai-chat-bubble">{message.text}</div>
               {message.learned && <span className="ai-learned-label">فُهمت من عبارة علّمتها</span>}
-              <ResultList results={message.results} />
+              <ResultList results={message.results} detailed={message.action === 'advanced-search' || message.action === 'details'} />
             </div>
           ))}
           {sending && <div className="ai-chat-msg ai-chat-msg-model"><div className="ai-chat-bubble ai-chat-bubble-loading">جارٍ تنفيذ الأمر المحلي...</div></div>}
