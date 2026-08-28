@@ -1753,6 +1753,28 @@ tr:last-child td {
   margin-top: 8px;
 }
 
+.upload-item-meta .upload-item-eta {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.upload-item-meta .upload-item-message {
+  flex-basis: 100%;
+}
+
+@media (max-width: 560px) {
+  .upload-item-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px 12px;
+  }
+
+  .upload-item-meta .upload-item-eta,
+  .upload-item-meta .upload-item-message {
+    grid-column: 1 / -1;
+  }
+}
+
 .upload-item-debug {
   font-size: 11px;
   color: var(--text-dim);

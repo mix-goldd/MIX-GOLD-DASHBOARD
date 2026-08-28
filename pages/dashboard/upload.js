@@ -4,6 +4,11 @@ import Dropdown from '../../components/Dropdown';
 import { getSessionFromReq } from '../../lib/auth';
 import { formatDuration } from '../../lib/animeContent';
 const {
+  blendRemoteSpeed,
+  calculateMeasuredUploadProgress,
+  calculateRemoteTimeEstimate,
+} = require('../../lib/uploadProgressEstimate');
+const {
   VIDMOLY_STATUS_POLL_INTERVAL_MS,
   MAX_VIDMOLY_STATUS_POLLS,
   canPollVidmolyStatus,
@@ -32,17 +37,22 @@ function formatBytes(n) {
   return `${(n / 1024 ** 3).toFixed(2)} GB`;
 }
 
+function formatRate(bytesPerSecond) {
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) return null;
+  return `${formatBytes(bytesPerSecond)}/ث`;
+}
+
 function formatEta(seconds) {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) {
     return null;
   }
-  if (seconds < 1) return 'almost done';
-  if (seconds < 60) return `${Math.ceil(seconds)}s left`;
+  if (seconds < 1) return 'أقل من ثانية';
+  if (seconds < 60) return `${Math.ceil(seconds)} ث`;
   const m = Math.floor(seconds / 60);
   const s = Math.round(seconds % 60);
-  if (m < 60) return `${m}m ${s}s left`;
+  if (m < 60) return `${m} د ${s} ث`;
   const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m left`;
+  return `${h} س ${m % 60} د`;
 }
 
 // Uploads via XMLHttpRequest (not fetch) so we can read real upload
@@ -113,9 +123,24 @@ export default function Upload({ session }) {
   const [localFolder, setLocalFolder] = useState('');
   const [localRunning, setLocalRunning] = useState(false);
   const [localQueue, setLocalQueue] = useState([]);
+  const [remoteSpeed, setRemoteSpeed] = useState(null);
+  const remoteSpeedRef = useRef(null);
+  const learnedFileCodesRef = useRef(new Set());
 
   useEffect(() => {
     loadFolders();
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedSpeed = Number(window.localStorage.getItem('mix-gold:remote-upload-speed'));
+      if (Number.isFinite(savedSpeed) && savedSpeed > 0) {
+        remoteSpeedRef.current = savedSpeed;
+        setRemoteSpeed(savedSpeed);
+      }
+    } catch (err) {
+      // Storage can be unavailable in private browsing; use the safe default.
+    }
   }, []);
 
   function loadFolders() {
@@ -233,12 +258,9 @@ export default function Upload({ session }) {
   // Content-Length before the URL is even sent to Vidmoly — see
   // upload-url.js), so a plausible percentage/ETA can be estimated
   // client-side from elapsed time, entirely without extra requests.
-  // ASSUMED_SPEED is a guess (server-to-server transfers vary a lot) —
-  // capped at 99% and clearly labeled "تقريبًا" so it reads as an
-  // estimate, never as a real measurement, and real completion always
-  // comes from an actual Vidmoly check (see the polling effect below),
-  // never from the estimate alone.
-  const ASSUMED_SPEED_BYTES_PER_SEC = 3 * 1024 * 1024; // ~3 MB/s
+  // The fallback rate is deliberately conservative. Completed URL uploads
+  // can refine it in this browser, while actual completion always comes
+  // from Vidmoly's status check, never from this estimate.
   const [, forceTick] = useState(0);
   useEffect(() => {
     const anyDownloading = urlQueue.some((i) => i.status === 'downloading' && i.sourceSize);
@@ -248,13 +270,33 @@ export default function Upload({ session }) {
   }, [urlQueue]);
 
   function estimateProgress(item) {
-    if (!item.sourceSize || !item.startedAt) return null;
-    const elapsedSec = (Date.now() - item.startedAt) / 1000;
-    const estimatedBytes = Math.min(item.sourceSize, elapsedSec * ASSUMED_SPEED_BYTES_PER_SEC);
-    const pct = Math.min(99, (estimatedBytes / item.sourceSize) * 100);
-    const remainingBytes = item.sourceSize - estimatedBytes;
-    const etaSec = remainingBytes / ASSUMED_SPEED_BYTES_PER_SEC;
-    return { pct, etaSec };
+    return calculateRemoteTimeEstimate({
+      sourceSize: item.sourceSize,
+      startedAt: item.startedAt,
+      learnedSpeed: remoteSpeed,
+    });
+  }
+
+  function rememberRemoteSpeed(item) {
+    if (!item?.fileCode || learnedFileCodesRef.current.has(item.fileCode) || !item.sourceSize || !item.startedAt) {
+      return;
+    }
+
+    learnedFileCodesRef.current.add(item.fileCode);
+    const elapsedSeconds = (Date.now() - item.startedAt) / 1000;
+    if (!Number.isFinite(elapsedSeconds) || elapsedSeconds <= 0) return;
+
+    const learnedSpeed = blendRemoteSpeed({
+      previousSpeed: remoteSpeedRef.current,
+      observedSpeed: Number(item.sourceSize) / elapsedSeconds,
+    });
+    remoteSpeedRef.current = learnedSpeed;
+    setRemoteSpeed(learnedSpeed);
+    try {
+      window.localStorage.setItem('mix-gold:remote-upload-speed', String(learnedSpeed));
+    } catch (err) {
+      // Keep the estimate for this page even when persistent storage is blocked.
+    }
   }
 
   // Poll Vidmoly for each in-progress remote download to confirm actual
@@ -311,6 +353,7 @@ export default function Upload({ session }) {
             return;
           }
 
+          rememberRemoteSpeed(item);
           setUrlQueue((prev) =>
             prev.map((q) => (q.fileCode === item.fileCode ? { ...q, status: 'done', length, thumb } : q))
           );
@@ -378,6 +421,8 @@ export default function Upload({ session }) {
       total: file.size,
       pct: 0,
       eta: null,
+      speed: 0,
+      progressSamples: [],
       message: '',
       file,
     }));
@@ -386,7 +431,6 @@ export default function Upload({ session }) {
 
     for (const item of queued) {
       setLocalQueue((prev) => prev.map((q) => (q.id === item.id ? { ...q, status: 'uploading' } : q)));
-      const startedAt = Date.now();
       try {
         const formData = new FormData();
         formData.append('file', item.file);
@@ -394,13 +438,22 @@ export default function Upload({ session }) {
 
         // eslint-disable-next-line no-await-in-loop
         const { ok, data } = await uploadWithProgress('/api/doodstream/upload-local', formData, (loaded, total) => {
-          const elapsed = (Date.now() - startedAt) / 1000;
-          const speed = elapsed > 0.2 ? loaded / elapsed : 0;
-          const remaining = total - loaded;
-          const eta = speed > 0 ? remaining / speed : null;
-          const pct = total ? Math.round((loaded / total) * 100) : 0;
+          const now = Date.now();
           setLocalQueue((prev) =>
-            prev.map((q) => (q.id === item.id ? { ...q, loaded, total, pct, eta } : q))
+            prev.map((q) => {
+              if (q.id !== item.id) return q;
+              const samples = [...(q.progressSamples || []), { at: now, loaded }];
+              const progress = calculateMeasuredUploadProgress({ samples, total, now });
+              return {
+                ...q,
+                loaded: progress.loaded,
+                total,
+                pct: progress.pct,
+                eta: progress.etaSec,
+                speed: progress.rateBytesPerSec,
+                progressSamples: progress.samples,
+              };
+            })
           );
         });
 
@@ -501,6 +554,8 @@ export default function Upload({ session }) {
           <div className="upload-queue">
             {urlQueue.map((item) => {
               const estimate = item.status === 'downloading' ? estimateProgress(item) : null;
+              const eta = estimate ? formatEta(estimate.etaSec) : null;
+              const rate = estimate ? formatRate(estimate.rateBytesPerSec) : null;
               return (
                 <div className="upload-item" key={item.id}>
                   <div className="upload-item-head">
@@ -511,22 +566,23 @@ export default function Upload({ session }) {
                   <div className="upload-item-meta">
                     {item.status === 'downloading' && estimate && (
                       <>
-                        <span>~{Math.round(estimate.pct)}% (estimated)</span>
-                        <span>{formatBytes(item.sourceSize)}</span>
-                        <span>{formatEta(estimate.etaSec)} (estimated)</span>
+                        <span>~{Math.round(estimate.pct)}% تقريبي</span>
+                        <span>الحجم: {formatBytes(item.sourceSize)}</span>
+                        {rate && <span>السرعة التقديرية: {rate}</span>}
+                        {eta && <span className="upload-item-eta">الوقت المتبقي التقريبي: ~{eta}</span>}
                       </>
                     )}
                     {item.status === 'downloading' && !item.sourceSize && (
-                      <span>Downloading on Vidmoly&apos;s side — the source didn&apos;t report a size, so no estimate is available.</span>
+                      <span className="upload-item-message">يتم التحميل على خوادم Vidmoly، لكن المصدر لم يرسل الحجم لذلك لا يتوفر تقدير للوقت.</span>
                     )}
                     {item.status === 'downloading' && (item.pollCount || 0) >= MAX_VIDMOLY_STATUS_POLLS && (
-                      <span>Taking longer than estimated — stopped auto-checking to save today&apos;s request quota. Check the Videos page in a bit.</span>
+                      <span className="upload-item-message">تجاوز التحميل المدة التقريبية؛ أوقفنا التحقق التلقائي لحماية حصة اليوم. راجع صفحة الفيديوهات لاحقًا.</span>
                     )}
                     {item.status === 'done' && item.length ? <span>Duration: {formatDuration(item.length)}</span> : null}
                     {item.status === 'done' && item.title && item.renamed === false && (
-                      <span>Uploaded, but the title may not have saved — check it on the Videos page.</span>
+                      <span className="upload-item-message">اكتمل الرفع، لكن قد لا يكون العنوان قد حُفظ؛ راجعه من صفحة الفيديوهات.</span>
                     )}
-                    {item.message && <span>{item.message}</span>}
+                    {item.message && <span className="upload-item-message">{item.message}</span>}
                   </div>
                 </div>
               );
@@ -593,10 +649,13 @@ export default function Upload({ session }) {
                       <span>
                         {formatBytes(item.loaded)} / {formatBytes(item.total)}
                       </span>
-                      {formatEta(item.eta) && <span>{formatEta(item.eta)}</span>}
+                      {formatRate(item.speed) && <span>السرعة: {formatRate(item.speed)}</span>}
+                      {formatEta(item.eta) && (
+                        <span className="upload-item-eta">الوقت المتبقي: ~{formatEta(item.eta)}</span>
+                      )}
                     </>
                   )}
-                  {item.status !== 'uploading' && item.message && <span>{item.message}</span>}
+                  {item.status !== 'uploading' && item.message && <span className="upload-item-message">{item.message}</span>}
                 </div>
               </div>
             ))}
