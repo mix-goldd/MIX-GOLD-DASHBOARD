@@ -20,6 +20,7 @@ const TRAINING_ACTIONS = {
   list: 'اعرض مكتبة الفيديوهات',
   search: 'ابحث في مكتبة الفيديوهات',
   'prepare-draft': 'جهّز مسودة محلية من فيديو',
+  'publish-draft': 'انشر فيديو مباشرة على الموقع',
 };
 
 const EMPTY_TRAINING_FORM = { phrase: '', action: 'search', query: '', testCommand: '' };
@@ -124,11 +125,69 @@ export default function LocalCommandAssistant({ session }) {
   const [synopsisResult, setSynopsisResult] = useState(null);
   const [synopsisLoading, setSynopsisLoading] = useState(false);
   const [synopsisError, setSynopsisError] = useState(null);
+  const [activeUploads, setActiveUploads] = useState([]);
   const listRef = useRef(null);
+  const uploadTimersRef = useRef(new Map());
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
   }, [messages, sending, pendingChange]);
+
+  // Cancels any in-flight "حمل وانشر" poll loops if the page is left —
+  // without this, a setTimeout from a stale poll can still fire after
+  // unmount and call setState on a component that's gone.
+  useEffect(() => {
+    const timers = uploadTimersRef.current;
+    return () => {
+      timers.forEach((timerId) => clearTimeout(timerId));
+      timers.clear();
+    };
+  }, []);
+
+  async function pollUploadAndPublish(fileCode, title, attempt = 1) {
+    const MAX_ATTEMPTS = 10; // 10 * 30s = 5 minutes, matching what was promised in chat
+    try {
+      const res = await fetch(`/api/doodstream/upload-url/${fileCode}`);
+      const data = await res.json().catch(() => ({}));
+      if (data?.result?.done) {
+        uploadTimersRef.current.delete(fileCode);
+        setActiveUploads((current) => current.filter((item) => item.fileCode !== fileCode));
+        const finalizeRes = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ finalizeUpload: true, fileCode, title }),
+        });
+        const finalizeData = await finalizeRes.json().catch(() => ({}));
+        if (finalizeData.published) {
+          setDraft(null);
+        } else if (finalizeData.draft) {
+          setDraft(finalizeData.draft);
+        }
+        setMessages((current) => [...current, {
+          role: 'model',
+          text: finalizeData.text || 'تم تنفيذ الأمر.',
+          results: finalizeData.results || [],
+          action: finalizeData.action || 'none',
+        }]);
+        return;
+      }
+    } catch (error) {
+      // A single failed poll doesn't abort the whole loop — Vidmoly or the
+      // network can hiccup mid-download; just retry on the next tick.
+    }
+    if (attempt >= MAX_ATTEMPTS) {
+      uploadTimersRef.current.delete(fileCode);
+      setActiveUploads((current) => current.filter((item) => item.fileCode !== fileCode));
+      setMessages((current) => [...current, {
+        role: 'model',
+        text: `التحميل لسه شغال بعد 5 دقائق. تابعه من صفحة الفيديوهات، وبعد ما يخلص اكتب «انشر ${title}» لنشره.`,
+        action: 'upload-and-publish',
+      }]);
+      return;
+    }
+    const timerId = setTimeout(() => pollUploadAndPublish(fileCode, title, attempt + 1), 30000);
+    uploadTimersRef.current.set(fileCode, timerId);
+  }
 
   function applyTrainingPayload(nextTraining) {
     setTraining(Array.isArray(nextTraining?.examples) ? nextTraining.examples : []);
@@ -176,6 +235,34 @@ export default function LocalCommandAssistant({ session }) {
         setPendingChange(null);
       }
       if (data.action === 'rename-draft' || data.action === 'delete-draft') {
+        setPendingChange(data);
+      }
+      if (data.action === 'publish-draft') {
+        if (data.pendingPublish) {
+          // Real publish, not a local draft — hold it behind the same
+          // confirm/cancel box used for rename/delete rather than firing
+          // the site write straight from the typed command.
+          setPendingChange(data);
+        } else if (data.published) {
+          setDraft(null);
+          setPendingChange(null);
+        } else if (data.draft) {
+          setDraft(data.draft);
+          setPendingChange(null);
+        }
+      }
+      if (data.action === 'upload-and-publish' && data.polling && data.fileCode) {
+        setActiveUploads((current) => [...current, { fileCode: data.fileCode, title: data.title }]);
+        pollUploadAndPublish(data.fileCode, data.title);
+      }
+      if (data.action === 'batch-upload-and-publish' && Array.isArray(data.items) && data.items.length) {
+        setActiveUploads((current) => [...current, ...data.items]);
+        data.items.forEach((item) => pollUploadAndPublish(item.fileCode, item.title));
+      }
+      if (data.action === 'match-titles-by-size' && data.pendingTitleMatches && Array.isArray(data.matches) && data.matches.length) {
+        // Same confirm/cancel box as rename/delete/publish — proposals are
+        // local-only (matched by size against the cached snapshot) until
+        // تأكيد actually calls /file/rename on Vidmoly.
         setPendingChange(data);
       }
       setMessages((current) => [...current, {
@@ -390,8 +477,73 @@ export default function LocalCommandAssistant({ session }) {
   const activeTrainingPage = Math.min(trainingPage, visibleTrainingPage);
   const visibleTraining = filteredTraining.slice((activeTrainingPage - 1) * TRAINING_PAGE_SIZE, activeTrainingPage * TRAINING_PAGE_SIZE);
 
+  async function confirmPublish(pendingPublish) {
+    setError(null);
+    setSending(true);
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draft: pendingPublish.draft, confirmPublish: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر تنفيذ الأمر المحلي.');
+      if (data.published) {
+        setDraft(null);
+      } else if (data.draft) {
+        setDraft(data.draft);
+      }
+      setMessages((current) => [...current, {
+        role: 'model',
+        text: data.text || 'تم تنفيذ الأمر.',
+        results: data.results || [],
+        action: data.action || 'none',
+      }]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function confirmTitleMatches(pendingMatches) {
+    setError(null);
+    setSending(true);
+    try {
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matches: pendingMatches.matches, confirmTitleMatches: true }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || 'تعذر تنفيذ الأمر المحلي.');
+      setMessages((current) => [...current, {
+        role: 'model',
+        text: data.text || 'تم تنفيذ الأمر.',
+        results: data.results || [],
+        action: data.action || 'none',
+      }]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSending(false);
+    }
+  }
+
   function confirmPendingChange() {
     if (!pendingChange) return;
+    if (pendingChange.action === 'publish-draft') {
+      const target = pendingChange;
+      setPendingChange(null);
+      confirmPublish(target);
+      return;
+    }
+    if (pendingChange.action === 'match-titles-by-size') {
+      const target = pendingChange;
+      setPendingChange(null);
+      confirmTitleMatches(target);
+      return;
+    }
     if (pendingChange.action === 'rename-draft' && pendingChange.draft) {
       setDraft(pendingChange.draft);
       setMessages((current) => [...current, { role: 'model', text: `تم تغيير عنوان المسودة إلى «${pendingChange.draft.title}».` }]);
@@ -642,6 +794,17 @@ export default function LocalCommandAssistant({ session }) {
           )}
         </section>
 
+        {activeUploads.length > 0 && (
+          <section className="ai-local-draft" aria-live="polite" aria-label="تحميل جارٍ وسينشر تلقائيًا">
+            {activeUploads.map((item) => (
+              <div key={item.fileCode}>
+                <strong>جارٍ التحميل، سيُنشر تلقائيًا عند الاكتمال</strong>
+                <p>{item.title}</p>
+              </div>
+            ))}
+          </section>
+        )}
+
         {draft && (
           <section className="ai-local-draft" aria-label="المسودة المحلية الحالية">
             <div>
@@ -667,7 +830,7 @@ export default function LocalCommandAssistant({ session }) {
         <div className="ai-chat-list" ref={listRef}>
           {messages.length === 0 && (
             <div className="ai-chat-empty">
-              <p>اكتب أمرًا واضحًا لتنفيذه داخل اللوحة. لا ينشر أو يحذف أي محتوى تلقائيًا.</p>
+              <p>اكتب أمرًا واضحًا لتنفيذه داخل اللوحة. «جهّز» يجهز مسودة تراجعها بنفسك في نموذج النشر، «انشر» يطلب تأكيدًا ثم ينشر على الموقع مباشرة، و«حمل وانشر [رابط] باسم [عنوان]» يحمّل فيديو جديدًا وينشره تلقائيًا فور اكتماله بلا تأكيد إضافي — أو «حمل وانشر حلقات [سلسلة] من [رقم]: [روابط]» لعدة حلقات دفعة واحدة بترقيم تلقائي. لا يحذف أي محتوى تلقائيًا.</p>
               <div className="ai-chat-hints">
                 {STARTER_HINTS.map((hint) => (
                   <button type="button" key={hint} className="ai-chat-hint" onClick={() => send(hint)}>{hint}</button>

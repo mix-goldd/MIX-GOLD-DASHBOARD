@@ -15,13 +15,19 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'A folder name is required.' });
       }
       const data = await vidmoly.renameFolder(id, name);
-      if (data?.status === 200) markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+      if (data?.status === 200) {
+        markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+        markVidmolySnapshotStale('folders').catch((error) => console.error('Could not mark folders snapshot stale:', error.message));
+      }
       return res.status(200).json(data);
     }
 
     if (req.method === 'DELETE') {
       const data = await vidmoly.deleteFolder(id);
-      if (data?.status === 200) markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+      if (data?.status === 200) {
+        markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+        markVidmolySnapshotStale('folders').catch((error) => console.error('Could not mark folders snapshot stale:', error.message));
+      }
       return res.status(200).json(data);
     }
 

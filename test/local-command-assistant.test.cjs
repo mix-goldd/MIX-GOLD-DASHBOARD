@@ -56,14 +56,15 @@ describe('Local command assistant', () => {
     });
   });
 
-  it('keeps the command API snapshot-only and provider-free', () => {
+  it('keeps ordinary commands snapshot-only and reserves provider calls for explicit actions', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'pages', 'api', 'ai', 'chat.js'), 'utf8');
     expect(source).toContain("getDashboardSetting(LIBRARY_SNAPSHOT_KEY)");
     expect(source).toContain('getTraining(session.id)');
     expect(source).not.toContain("require('../../../lib/gemini')");
     expect(source).not.toContain('generateContent(');
     expect(source).not.toContain('fetch(');
-    expect(source).not.toContain('vidmoly.');
+    expect(source).toContain('vidmoly.addRemoteUpload');
+    expect(source).toContain('vidmoly.renameFile');
     expect(source).toContain('findAdvancedLibraryMatches');
     expect(source).toContain('advancedSearch');
   });

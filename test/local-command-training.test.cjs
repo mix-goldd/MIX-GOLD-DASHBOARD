@@ -141,14 +141,15 @@ describe('Local command training', () => {
     expect(parsed.type).not.toBe('delete-video');
   });
 
-  it('keeps the command route local, snapshot-only, and provider-free after training is loaded', () => {
+  it('keeps ordinary trained commands local while reserving provider calls for explicit actions', () => {
     const source = fs.readFileSync(path.join(__dirname, '..', 'pages', 'api', 'ai', 'chat.js'), 'utf8');
     expect(source).toContain('getTraining(session.id)');
     expect(source).toContain("getDashboardSetting(LIBRARY_SNAPSHOT_KEY)");
     expect(source).not.toContain("require('../../../lib/gemini')");
     expect(source).not.toContain('generateContent(');
     expect(source).not.toContain('fetch(');
-    expect(source).not.toContain('vidmoly.');
+    expect(source).toContain('vidmoly.addRemoteUpload');
+    expect(source).toContain('vidmoly.renameFile');
     expect(source).toContain('recordUnrecognizedPhrase(session.id, command)');
   });
 

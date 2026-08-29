@@ -120,13 +120,14 @@ describe('Elcinema synopsis parser', () => {
 });
 
 describe('Elcinema external route isolation', () => {
-  it('keeps the local Vidmoly command route snapshot-only and moves public fetching to the protected separate route', () => {
+  it('keeps local commands snapshot-only while isolating synopsis fetching to explicit publish handling', () => {
     const chatSource = fs.readFileSync(path.join(__dirname, '..', 'pages', 'api', 'ai', 'chat.js'), 'utf8');
     const routeSource = fs.readFileSync(path.join(__dirname, '..', 'pages', 'api', 'ai', 'external-synopsis.js'), 'utf8');
     const parserSource = fs.readFileSync(path.join(__dirname, '..', 'lib', 'elcinemaSynopsis.js'), 'utf8');
     expect(chatSource).toContain('synopsisRequest');
     expect(chatSource).not.toContain('fetch(');
-    expect(chatSource).not.toContain('lookupElcinemaSynopsis');
+    expect(chatSource).toContain('lookupElcinemaSynopsis');
+    expect(chatSource).toContain('findDescriptionForDraft');
     expect(routeSource).toContain('requireAuth(req, res)');
     expect(routeSource).toContain("req.method !== 'POST'");
     expect(routeSource).toContain('lookupElcinemaSynopsis(request)');

@@ -1,6 +1,6 @@
 const { requireAuth } = require('../../../lib/api-auth');
 const vidmoly = require('../../../lib/vidmoly');
-const { markVidmolySnapshotStale } = require('../../../lib/vidmolyDashboardCache');
+const { getOrRefreshVidmolySnapshot, markVidmolySnapshotStale } = require('../../../lib/vidmolyDashboardCache');
 
 // Walks every folder in the account (folders only — no file listing,
 // so this stays cheap even for large libraries). Used to populate
@@ -27,13 +27,26 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'A folder name is required.' });
       }
       const data = await vidmoly.createFolder(name, parent_id);
-      if (data?.status === 200) markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+      if (data?.status === 200) {
+        markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+        markVidmolySnapshotStale('folders').catch((error) => console.error('Could not mark folders snapshot stale:', error.message));
+      }
       return res.status(200).json(data);
     }
 
     if (req.query.all === '1') {
-      const folders = await collectFoldersRecursive(req.query.fld_id || 0);
-      return res.status(200).json({ status: 200, result: { folders } });
+      // Cached the same way the library list is: the full folder tree is
+      // only needed to fill picker dropdowns, so re-opening the upload page
+      // reuses the last snapshot instead of spending a live Vidmoly request
+      // every time. Callers always walk from the root, so one shared
+      // snapshot per deployment is correct here.
+      const force = req.query.refresh === '1' && session.role === 'admin';
+      const snapshot = await getOrRefreshVidmolySnapshot(
+        'folders',
+        () => collectFoldersRecursive(req.query.fld_id || 0).then((folders) => ({ status: 200, result: { folders } })),
+        { force }
+      );
+      return res.status(200).json(snapshot.payload);
     }
 
     const { fld_id } = req.query;
