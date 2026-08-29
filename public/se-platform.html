@@ -2471,14 +2471,23 @@
             align-items: stretch;
             animation: fadeIn 0.4s ease-out;
         }
+        .pixiv-ad-row {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            width: 100%;
+            align-items: stretch;
+            overflow: hidden;
+        }
         .extra-images-wrapper.show {
             display: flex;
         }
         .pixiv-ad-slot {
             width: 100%;
+            min-width: 0;
             display: flex;
             flex-direction: column;
-            align-items: center;
+            align-items: stretch;
             gap: 4px;
             padding: 10px 0;
         }
@@ -4590,10 +4599,12 @@
         let mangaReaderDirection = localStorage.getItem('mangaReaderDirection') || 'ltr';
         let followedManga = JSON.parse(localStorage.getItem('mangaFollows')) || [];
 
-        const ADSTERRA_KEY = 'YOUR_ADSTERRA_ZONE_KEY_HERE';
+        const ADSTERRA_NATIVE_SRC = 'https://pl31016146.profitableratecpmnetwork.com/da651a3db53f6387213c1823774a77d2/invoke.js';
+        const ADSTERRA_NATIVE_CONTAINER = 'container-da651a3db53f6387213c1823774a77d2';
         const ADSTERRA_WIDTH = 300;
         const ADSTERRA_HEIGHT = 250;
         const AD_FREQUENCY = 3;
+        const AD_UNITS_PER_ROW = 4;
 
 
         let isLoggedIn = false;
@@ -7724,12 +7735,12 @@
       let galleryHtml = '';
       if (Array.isArray(images) && images.length > 1) {
         const adCount = Math.floor(images.length / AD_FREQUENCY);
-        const totalSlides = images.length + adCount;
+        const totalSlides = images.length + (adCount * AD_UNITS_PER_ROW);
         galleryHtml = `<div class="pixiv-image-container"><img src="${escapeHtml(images[0])}" alt="${escapeHtml(title)}" onclick="toggleImageZoom(this)"><div class="pixiv-image-counter">1/${totalSlides}</div><button class="pixiv-show-all-btn" onclick="toggleExtraImages(${totalSlides})">Show all</button></div><div class="extra-images-wrapper">`;
         for (let i = 1; i < images.length; i++) {
           galleryHtml += `<div class="pixiv-image-container"><img src="${escapeHtml(images[i])}" alt="${escapeHtml(title)}" onclick="toggleImageZoom(this)"></div>`;
           if ((i + 1) % AD_FREQUENCY === 0) {
-            galleryHtml += `<div class="pixiv-ad-slot" data-ad-slot></div>`;
+            galleryHtml += '<div class="pixiv-ad-row" data-ad-row>' + Array.from({ length: AD_UNITS_PER_ROW }, () => '<div class="pixiv-ad-slot" data-ad-slot></div>').join('') + '</div>';
           }
         }
         galleryHtml += `</div>`;
@@ -8368,17 +8379,9 @@
     }
 
     function buildAdSlotHtml() {
-      return `<!DOCTYPE html><html><head><style>body{margin:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;}</style></head><body>
-<script type="text/javascript">
-atOptions = {
-  'key' : '${ADSTERRA_KEY}',
-  'format' : 'iframe',
-  'height' : ${ADSTERRA_HEIGHT},
-  'width' : ${ADSTERRA_WIDTH},
-  'params' : {}
-};
-<\/script>
-<script type="text/javascript" src="//www.highperformanceformat.com/${ADSTERRA_KEY}/invoke.js"><\/script>
+      return `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>body{margin:0;display:flex;align-items:center;justify-content:center;overflow:hidden;background:transparent;}#${ADSTERRA_NATIVE_CONTAINER}{width:100%;min-height:120px;}</style></head><body>
+<script async="async" data-cfasync="false" src="${ADSTERRA_NATIVE_SRC}"><\/script>
+<div id="${ADSTERRA_NATIVE_CONTAINER}"></div>
 </body></html>`;
     }
     function populateAdSlots(container) {
@@ -8388,7 +8391,7 @@ atOptions = {
         label.className = 'pixiv-ad-slot-label';
         label.textContent = 'Advertisement';
         const iframe = document.createElement('iframe');
-        iframe.width = String(ADSTERRA_WIDTH);
+        iframe.width = '100%';
         iframe.height = String(ADSTERRA_HEIGHT);
         iframe.scrolling = 'no';
         iframe.srcdoc = buildAdSlotHtml();
