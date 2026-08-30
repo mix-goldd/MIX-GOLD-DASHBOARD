@@ -5,6 +5,10 @@ const publicSiteSource = fs.readFileSync(
   path.join(__dirname, '..', 'public', 'site', 'index.html'),
   'utf8',
 );
+const sePlatformSource = fs.readFileSync(
+  path.join(__dirname, '..', 'public', 'se-platform.html'),
+  'utf8',
+);
 
 describe('واجهة الموقع العام الحديثة', () => {
   it('تستخدم شعار MIX GOLD الحديث ولا تعود إلى شعار PulseX القديم', () => {
