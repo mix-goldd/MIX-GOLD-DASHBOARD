@@ -24,7 +24,7 @@ export async function getServerSideProps({ req, res }) {
   const source = path.join(process.cwd(), 'dist', 'public', 'site', 'index.html');
   let html = await readFile(source, 'utf8');
   const pathname = String(req?.url || '').split('?')[0];
-  const match = pathname.match(/^\/post\/([^/]+)\/?$/);
+  const match = pathname.match(/^\/Watch\/([^/]+)\/?$/);
 
   if (match) {
     const slug = decodeURIComponent(match[1]);
@@ -37,7 +37,7 @@ export async function getServerSideProps({ req, res }) {
         const title = post.title || 'MIX GOLD';
         const description = post.description || post.synopsis || '';
         const image = vidmolyMatch?.thumbnail_url || post.thumbnail_url || '';
-        const publicPostUrl = `${requestSiteUrl(req)}/post/${slug}`;
+        const publicPostUrl = `${requestSiteUrl(req)}/Watch/${slug}`;
         const shareDescription = [description, publicPostUrl].filter(Boolean).join('\n\n');
         const tags = [
           `<title>${escapeHtml(title)} | MIX GOLD</title>`,

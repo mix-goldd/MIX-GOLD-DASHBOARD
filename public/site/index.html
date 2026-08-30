@@ -9246,7 +9246,7 @@ function toggleSave(url, cardElement) {
                 post: params.get('post'), dl: params.get('dl'), img: params.get('img'),
                 manga: params.get('manga'), ch: params.get('ch'), p: params.get('p')
             };
-            if (parts[0] === 'post' && parts[1]) route.post = parts[1];
+            if (parts[0] === 'Watch' && parts[1]) route.post = parts[1];
             else if (parts[0] === 'download' && parts[1]) route.dl = parts[1];
             else if (parts[0] === 'manga' && parts[1]) {
                 route.manga = parts[1];
@@ -9261,7 +9261,7 @@ function toggleSave(url, cardElement) {
 
         function directPath(type, value, chapterNumber, pageNumber) {
             const encodedValue = encodeURIComponent(String(value || ''));
-            if (type === 'post') return `/post/${encodedValue}`;
+            if (type === 'post') return `/Watch/${encodedValue}`;
             if (type === 'download') return `/download/${encodedValue}`;
             if (type === 'manga') {
                 let path = `/manga/${encodedValue}`;

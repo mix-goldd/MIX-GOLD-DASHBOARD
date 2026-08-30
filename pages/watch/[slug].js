@@ -49,7 +49,7 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
 
   const siteWatchUrl = siteUrl ? `${siteUrl}/?post=${slug}` : `/?post=${slug}`;
   const siteDownloadUrl = siteUrl ? `${siteUrl}/?dl=${slug}` : `/?dl=${slug}`;
-  const canonicalUrl = siteUrl ? `${siteUrl}/post/${slug}` : `/post/${slug}`;
+  const canonicalUrl = siteUrl ? `${siteUrl}/Watch/${slug}` : `/Watch/${slug}`;
   const shareDescription = [description, canonicalUrl || siteWatchUrl].filter(Boolean).join('\n\n');
   const shareText = buildShareText({ title, description, url: canonicalUrl || siteWatchUrl });
   const [shareState, setShareState] = useState('');

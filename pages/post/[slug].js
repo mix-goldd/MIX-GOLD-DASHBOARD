@@ -37,7 +37,7 @@ export default function PublicPostPage({ post, siteUrl, vidmolyThumbnail }) {
   const description = post.description || post.synopsis || '';
   const image = vidmolyThumbnail || post.thumbnail_url || '';
   const slug = slugFromKey(post.thumbnail_url);
-  const publicPostUrl = siteUrl ? `${siteUrl}/post/${slug}` : `/post/${slug}`;
+  const publicPostUrl = siteUrl ? `${siteUrl}/Watch/${slug}` : `/Watch/${slug}`;
   const shareDescription = [description, publicPostUrl].filter(Boolean).join('\n\n');
   const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(publicPostUrl)}`;
 

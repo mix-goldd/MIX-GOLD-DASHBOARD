@@ -35,8 +35,8 @@ test('يوجه جذر نطاق لوحة التحكم إلى لوحة التحك�
 });
 
 test('يعيد روابط المنشورات العامة من نطاق اللوحة إلى النطاق العام', () => {
-  assert.deepEqual(routeForHost('mix-gold-dashboard.vercel.app', '/post/176jab8'), {
+  assert.deepEqual(routeForHost('mix-gold-dashboard.vercel.app', '/Watch/176jab8'), {
     type: 'external',
-    destination: 'https://mix-goldd.vercel.app/post/176jab8',
+    destination: 'https://mix-goldd.vercel.app/Watch/176jab8',
   });
 });
