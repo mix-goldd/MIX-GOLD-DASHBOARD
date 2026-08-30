@@ -41,6 +41,11 @@ describe('واجهة الموقع العام الحديثة', () => {
     expect(publicSiteSource).not.toContain('restoreTransferredAgreement');
     expect(publicSiteSource).not.toContain('mixgold_agreement');
     expect(publicSiteSource).not.toContain('agreedToTerms');
+    expect(sePlatformSource).not.toContain('id="agreement-overlay"');
+    expect(sePlatformSource).not.toContain('function checkAgreement()');
+    expect(sePlatformSource).not.toContain('function acceptAgreement()');
+    expect(sePlatformSource).not.toContain('function declineAgreement()');
+    expect(sePlatformSource).not.toContain('agreedToTerms');
     expect(publicSiteSource).toContain('if (isMangaReaderActive() || hasSeenSocialBarInVisit()) return;');
   });
 

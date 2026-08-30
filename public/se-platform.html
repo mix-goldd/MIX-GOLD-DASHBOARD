@@ -198,63 +198,6 @@
             to { transform: rotate(360deg); }
         }
 
-        #agreement-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            z-index: 9998;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.3s ease, visibility 0.3s ease;
-        }
-        #agreement-overlay.active {
-            visibility: visible;
-            opacity: 1;
-        }
-        .agreement-modal {
-            background: var(--card-bg);
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-        .agreement-modal h3 {
-            margin: 0 0 15px 0;
-            color: var(--primary-color);
-        }
-        .agreement-modal p {
-            margin-bottom: 25px;
-            line-height: 1.5;
-        }
-        .agreement-actions {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-        }
-        .agreement-btn {
-            padding: 10px 25px;
-            border-radius: 30px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            font-size: 1rem;
-        }
-        .accept-btn {
-            background: var(--primary-color);
-            color: white;
-        }
-        .decline-btn {
-            background: #555;
-            color: white;
-        }
-
         .sidebar {
             position: fixed;
             top: 0;
@@ -3741,17 +3684,6 @@
         <div class="spinner"></div>
     </div>
 
-    <div id="agreement-overlay">
-        <div class="agreement-modal">
-            <h3>Agreement</h3>
-            <p>By entering this website, you agree to our terms and conditions. Do you accept?</p>
-            <div class="agreement-actions">
-                <button class="agreement-btn accept-btn" onclick="acceptAgreement()">Accept</button>
-                <button class="agreement-btn decline-btn" onclick="declineAgreement()">Decline</button>
-            </div>
-        </div>
-    </div>
-
     <div id="auth-modal-overlay" onclick="if(event.target===this) closeAuthModal()">
         <div class="login-card">
             <button class="auth-modal-close" onclick="closeAuthModal()"><i class="fas fa-times"></i></button>
@@ -4884,34 +4816,9 @@
             return translations[currentLanguage]?.[key] || translations.en[key] || key;
         }
 
-        function checkAgreement() {
-            const savedTime = localStorage.getItem('agreedToTerms');
-            if (!savedTime) {
-                document.getElementById('agreement-overlay').classList.add('active');
-                return;
-            }
-            const agreedTimestamp = parseInt(savedTime, 10);
-            const now = Date.now();
-            const twelveHours = 12 * 60 * 60 * 1000;
-            if (now - agreedTimestamp > twelveHours) {
-                localStorage.removeItem('agreedToTerms');
-                document.getElementById('agreement-overlay').classList.add('active');
-            }
-        }
-
-        function acceptAgreement() {
-            localStorage.setItem('agreedToTerms', Date.now().toString());
-            document.getElementById('agreement-overlay').classList.remove('active');
-        }
-
-        function declineAgreement() {
-            window.location.href = 'https://www.google.com';
-        }
-
         window.addEventListener('load', function() {
             setTimeout(() => {
                 document.getElementById('preloader').classList.add('hidden');
-                checkAgreement();
             }, 600);
         });
 
