@@ -27,6 +27,13 @@ test('يتجاوز مسار الموقع العام الديناميكي صفح�
   });
 });
 
+test('يعيد كتابة مسار Watch العام إلى واجهة الموقع الثابتة', () => {
+  assert.deepEqual(routeForHost('mix-goldd.vercel.app', '/Watch/6t1nx1'), {
+    type: 'internal',
+    destination: '/site/index.html',
+  });
+});
+
 test('يوجه جذر نطاق لوحة التحكم إلى لوحة التحكم', () => {
   assert.deepEqual(routeForHost('mix-gold-dashboard.vercel.app', '/'), {
     type: 'internal',

@@ -20,7 +20,7 @@ function routeForHost(hostname, pathname) {
   const path = pathname || '/';
 
   if (host === PUBLIC_SITE_HOST || host === `www.${PUBLIC_SITE_HOST}`) {
-    if (path === '/' || path === '/site' || path === '/site/' || path === '/login' || path === '/setup' || path.startsWith('/dashboard')) {
+    if (path === '/' || path === '/site' || path === '/site/' || path === '/login' || path === '/setup' || path.startsWith('/dashboard') || path.startsWith('/Watch/')) {
       return { type: 'internal', destination: '/site/index.html' };
     }
     return null;
