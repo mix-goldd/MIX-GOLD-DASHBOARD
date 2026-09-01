@@ -47,6 +47,7 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
   const image = vidmolyThumbnail || post.thumbnail_url || '';
   const slug = slugFromKey(post.thumbnail_url);
 
+  const hasDownloadUrl = Boolean(String(post.download_url || '').trim());
   const siteWatchUrl = siteUrl ? `${siteUrl}/?post=${slug}` : `/?post=${slug}`;
   const siteDownloadUrl = siteUrl ? `${siteUrl}/?dl=${slug}` : `/?dl=${slug}`;
   const canonicalUrl = siteUrl ? `${siteUrl}/Watch/${slug}` : `/Watch/${slug}`;
@@ -135,7 +136,7 @@ export default function WatchPage({ post, siteUrl, vidmolyThumbnail }) {
             مشاركة المنشور
           </button>
           {shareState ? <div style={styles.shareState} role="status">{shareState}</div> : null}
-          {post.download_url ? (
+          {hasDownloadUrl ? (
             <a href={siteDownloadUrl} style={styles.secondaryBtn}>
               تحميل
             </a>

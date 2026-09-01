@@ -9,6 +9,10 @@ const sePlatformSource = fs.readFileSync(
   path.join(__dirname, '..', 'public', 'se-platform.html'),
   'utf8',
 );
+const watchPageSource = fs.readFileSync(
+  path.join(__dirname, '..', 'pages', 'watch', '[slug].js'),
+  'utf8',
+);
 
 describe('واجهة الموقع العام الحديثة', () => {
   it('تستخدم شعار MIX GOLD الحديث ولا تعود إلى شعار PulseX القديم', () => {
@@ -58,6 +62,9 @@ describe('واجهة الموقع العام الحديثة', () => {
     expect(publicSiteSource).toContain("cta.hidden = !hasDownloadUrl;");
     expect(publicSiteSource).toContain("downloadUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.download || '') : (post.download_url || ''))");
     expect(publicSiteSource).not.toContain("post.download_url || post.page_url || ''");
+    expect(watchPageSource).toContain("const hasDownloadUrl = Boolean(String(post.download_url || '').trim());");
+    expect(watchPageSource).toContain('{hasDownloadUrl ? (');
+    expect(watchPageSource).not.toContain('{post.download_url ? (');
   });
 
   it('لا تنشر عنوان S-E الخاص بالواجهة القديمة', () => {
