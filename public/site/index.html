@@ -2366,6 +2366,10 @@
         .download-cta-btn:hover {
             filter: brightness(1.08);
         }
+        .action-item[hidden],
+        .download-cta-btn[hidden] {
+            display: none !important;
+        }
         .download-detail-note {
             margin-top: 18px;
             font-size: 0.8rem;
@@ -4841,7 +4845,7 @@
                         categories: relationRowsReady ? (categoriesByPost.get(post.id) || []) : legacyCategories,
                         starIds: relationRowsReady ? (starsByPost.get(post.id) || []) : (post.model_id ? [post.model_id] : []),
                         watchUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.watch || '') : (post.page_url || '')),
-                        downloadUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.download || '') : (post.download_url || post.page_url || '')),
+                        downloadUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.download || '') : (post.download_url || '')),
                         thumbnailUrl: preferredThumbnail,
                         imageUrls: preferredImages.length ? preferredImages : [preferredThumbnail],
                         views: relationRowsReady ? (relationMetrics.views ?? 0) : (post.views || 0),
@@ -8320,6 +8324,12 @@
             updateDetailStats(url);
             bindPostDetailEvents();
             const videoData = findVideoDataByUrl(url);
+            const downloadBtn = document.getElementById('download-btn');
+            if (downloadBtn) {
+                const hasDownloadUrl = Boolean(getSafePlayerUrl(videoData?.downloadUrl || ''));
+                downloadBtn.hidden = !hasDownloadUrl;
+                downloadBtn.setAttribute('aria-hidden', String(!hasDownloadUrl));
+            }
             setPostPlayerSource(videoData?.pageUrl);
             renderSuggestedRelated(videoData);
             renderPostPublisherInfo(videoData);
@@ -9331,8 +9341,12 @@ function toggleSave(url, cardElement) {
             document.getElementById('download-detail-nav-title').textContent = title;
             document.getElementById('download-detail-meta').textContent = videoData.duration ? `Duration: ${videoData.duration}` : '';
             const cta = document.getElementById('download-detail-cta');
-            cta.href = videoData.downloadUrl || videoData.pageUrl || '#';
-            document.getElementById('download-detail-note').textContent = videoData.pageUrl
+            const downloadUrl = getSafePlayerUrl(videoData?.downloadUrl || '');
+            const hasDownloadUrl = Boolean(downloadUrl);
+            cta.href = hasDownloadUrl ? downloadUrl : '#';
+            cta.hidden = !hasDownloadUrl;
+            cta.setAttribute('aria-hidden', String(!hasDownloadUrl));
+            document.getElementById('download-detail-note').textContent = hasDownloadUrl
                 ? ''
                 : 'Download link is not available for this post yet.';
 

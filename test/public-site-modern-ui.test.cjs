@@ -53,6 +53,13 @@ describe('واجهة الموقع العام الحديثة', () => {
     expect(publicSiteSource).toContain('if (isMangaReaderActive() || hasSeenSocialBarInVisit()) return;');
   });
 
+  it('تخفي أيقونة التحميل عند غياب رابط تحميل صالح وتظهرها عند توفره', () => {
+    expect(publicSiteSource).toContain("const hasDownloadUrl = Boolean(getSafePlayerUrl(videoData?.downloadUrl || ''));\n                downloadBtn.hidden = !hasDownloadUrl;");
+    expect(publicSiteSource).toContain("cta.hidden = !hasDownloadUrl;");
+    expect(publicSiteSource).toContain("downloadUrl: getSafePlayerUrl(relationRowsReady ? (relationLinks.download || '') : (post.download_url || ''))");
+    expect(publicSiteSource).not.toContain("post.download_url || post.page_url || ''");
+  });
+
   it('لا تنشر عنوان S-E الخاص بالواجهة القديمة', () => {
     expect(publicSiteSource).not.toContain('<title>S-E</title>');
   });
