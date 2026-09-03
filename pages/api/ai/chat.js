@@ -149,6 +149,11 @@ export default async function handler(req, res) {
       try {
         await vidmoly.renameFile(fileCode, fallbackTitle);
         raw = { ...raw, file_title: fallbackTitle };
+        try {
+          await markVidmolySnapshotStale('library');
+        } catch (staleError) {
+          console.error('Could not mark library snapshot stale:', staleError.message);
+        }
       } catch (error) {
         // Best-effort — publishes with whichever title Vidmoly actually has
         // rather than blocking the whole flow over a rename call failing.
@@ -205,7 +210,14 @@ export default async function handler(req, res) {
         failures.push(`${item?.episode ?? fileCode}: ${error.message}`);
       }
     }
-    if (applied > 0) markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+    if (applied > 0) {
+      // Awaited for the same reason as the upload branch — see its comment.
+      try {
+        await markVidmolySnapshotStale('library');
+      } catch (error) {
+        console.error('Could not mark library snapshot stale:', error.message);
+      }
+    }
     const failText = failures.length ? ` تعذر تغيير: ${failures.join('، ')}.` : '';
     return res.status(200).json({
       text: `تم تصحيح ${applied} عنوان فعليًا على Vidmoly.${failText}`,
@@ -284,7 +296,15 @@ export default async function handler(req, res) {
       }
       const raw = Array.isArray(data.result) ? data.result[0] : data.result;
       const fileCode = raw?.filecode || raw?.file_code || raw?.code || null;
-      markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+      // Awaited deliberately: Vercel can freeze a serverless invocation right
+      // after the response is sent, so a fire-and-forget write here can
+      // silently never land — which is exactly what made the dashboard not
+      // show this upload even once it had finished.
+      try {
+        await markVidmolySnapshotStale('library');
+      } catch (error) {
+        console.error('Could not mark library snapshot stale:', error.message);
+      }
       if (!fileCode) {
         return res.status(200).json({
           text: `بدأ تحميل «${parsed.title}» لكن تعذر تحديد رمز الملف لمتابعته تلقائيًا. تابعه من صفحة الفيديوهات، وانشره بأمر «انشر ${parsed.title}» لما يخلص.`,
@@ -297,7 +317,7 @@ export default async function handler(req, res) {
         });
       }
       return res.status(200).json({
-        text: `بدأ تحميل «${parsed.title}». هتابعه تلقائيًا وأنشره بمجرد ما يخلص (حتى 5 دقائق) — من غير تأكيد إضافي، ده نشر فعلي. سيب الصفحة مفتوحة لحد ما يخلص، ولو قفلتها هتلاقي الفيديو محمّل في صفحة الفيديوهات وتقدر تنشره بأمر «انشر» وقتها.`,
+        text: `بدأ تحميل «${parsed.title}». هتابعه تلقائيًا وأنشره بمجرد ما يخلص (حتى 28 دقيقة، لأن بعض المصادر بتحمّل ببطء) — من غير تأكيد إضافي، ده نشر فعلي. سيب الصفحة مفتوحة لحد ما يخلص، ولو قفلتها هتلاقي الفيديو محمّل في صفحة الفيديوهات وتقدر تنشره بأمر «انشر» وقتها.`,
         action: 'upload-and-publish',
         started: true,
         polling: true,
@@ -313,10 +333,13 @@ export default async function handler(req, res) {
   }
 
   if (parsed.type === 'batch-upload-and-publish') {
-    // Each episode costs at least 2 Vidmoly calls (start + the /file/info at
-    // finalize, plus a possible /file/rename) — capped well under the daily
-    // quota so one batch command can never exhaust it by itself.
-    const MAX_BATCH = 15;
+    // Each item polls independently on a shorter schedule than a single
+    // "حمل وانشر" (~7 min instead of ~28) specifically because the cost
+    // multiplies by batch size — 8 items already means up to ~70 Vidmoly
+    // calls in the worst case (uploads + polls + finalizes) against the
+    // 50/day quota, so the cap stays modest even though a single upload can
+    // afford a much longer wait.
+    const MAX_BATCH = 8;
     if (parsed.urls.length > MAX_BATCH) {
       return res.status(200).json({
         text: `عدد الروابط (${parsed.urls.length}) أكبر من الحد الآمن لأمر واحد (${MAX_BATCH} رابط) حتى لا تستهلك حصة Vidmoly اليومية دفعة واحدة. قسّمها على أكتر من أمر.`,
@@ -349,10 +372,16 @@ export default async function handler(req, res) {
         failures.push(`الحلقة ${episode}: ${error.message}`);
       }
     }
-    if (items.length) markVidmolySnapshotStale('library').catch((error) => console.error('Could not mark library snapshot stale:', error.message));
+    if (items.length) {
+      try {
+        await markVidmolySnapshotStale('library');
+      } catch (error) {
+        console.error('Could not mark library snapshot stale:', error.message);
+      }
+    }
     const lastEpisode = parsed.startEpisode + parsed.urls.length - 1;
     const startedText = items.length
-      ? `بدأ تحميل ${items.length} حلقة من «${parsed.series}» (${parsed.startEpisode}${lastEpisode > parsed.startEpisode ? `-${lastEpisode}` : ''}). هتابع كل واحدة وأنشرها فور اكتمالها تلقائيًا بلا تأكيد إضافي. سيب الصفحة مفتوحة لحد ما تخلص كلها.`
+      ? `بدأ تحميل ${items.length} حلقة من «${parsed.series}» (${parsed.startEpisode}${lastEpisode > parsed.startEpisode ? `-${lastEpisode}` : ''}). هتابع كل واحدة لحد 7 دقايق وأنشرها فور اكتمالها تلقائيًا بلا تأكيد إضافي — لو حلقة أخدت وقت أطول من كده (وارد مع مصادر بطيئة) هتلاقي رسالة تقولك تنشرها يدويًا بأمر «انشر» بمجرد ما تخلص. سيب الصفحة مفتوحة قد ما تقدر.`
       : 'تعذر بدء أي تحميل من الروابط المرسلة.';
     const failText = failures.length ? ` تعذر بدء: ${failures.join('، ')}.` : '';
     return res.status(200).json({

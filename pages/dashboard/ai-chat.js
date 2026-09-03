@@ -144,8 +144,20 @@ export default function LocalCommandAssistant({ session }) {
     };
   }, []);
 
-  async function pollUploadAndPublish(fileCode, title, attempt = 1) {
-    const MAX_ATTEMPTS = 10; // 10 * 30s = 5 minutes, matching what was promised in chat
+  // Graduated backoff instead of a flat interval: check quickly at first so
+  // small/fast files still finish promptly, then space checks out further
+  // apart so a slow download doesn't burn Vidmoly quota every 30 seconds for
+  // half an hour. This source (and others like it) throttle remote
+  // downloads to roughly 150-170 KB/s — visible in the &speed= param on the
+  // link itself — so a ~90MB 480p file alone takes ~9 minutes, and a 300MB+
+  // 1080p file can take 30+. A single "حمل وانشر" gets the long schedule
+  // (~28 min, 18 checks) since it's tracking one file; batch items get a
+  // shorter one (~7 min, 8 checks) since the check cost multiplies by how
+  // many are running at once.
+  const SINGLE_UPLOAD_POLL_SCHEDULE = [30, 30, 30, 30, 30, 60, 60, 60, 60, 60, 150, 150, 150, 150, 150, 150, 150, 150];
+  const BATCH_UPLOAD_POLL_SCHEDULE = [30, 30, 30, 60, 60, 60, 60, 60];
+
+  async function pollUploadAndPublish(fileCode, title, attempt = 1, schedule = SINGLE_UPLOAD_POLL_SCHEDULE) {
     try {
       const res = await fetch(`/api/doodstream/upload-url/${fileCode}`);
       const data = await res.json().catch(() => ({}));
@@ -175,17 +187,18 @@ export default function LocalCommandAssistant({ session }) {
       // A single failed poll doesn't abort the whole loop — Vidmoly or the
       // network can hiccup mid-download; just retry on the next tick.
     }
-    if (attempt >= MAX_ATTEMPTS) {
+    if (attempt > schedule.length) {
+      const totalMinutes = Math.round(schedule.reduce((sum, s) => sum + s, 0) / 60);
       uploadTimersRef.current.delete(fileCode);
       setActiveUploads((current) => current.filter((item) => item.fileCode !== fileCode));
       setMessages((current) => [...current, {
         role: 'model',
-        text: `التحميل لسه شغال بعد 5 دقائق. تابعه من صفحة الفيديوهات، وبعد ما يخلص اكتب «انشر ${title}» لنشره.`,
+        text: `التحميل لسه شغال بعد ${totalMinutes} دقيقة. تابعه من صفحة الفيديوهات، وبعد ما يخلص اكتب «انشر ${title}» لنشره.`,
         action: 'upload-and-publish',
       }]);
       return;
     }
-    const timerId = setTimeout(() => pollUploadAndPublish(fileCode, title, attempt + 1), 30000);
+    const timerId = setTimeout(() => pollUploadAndPublish(fileCode, title, attempt + 1, schedule), schedule[attempt - 1] * 1000);
     uploadTimersRef.current.set(fileCode, timerId);
   }
 
@@ -257,7 +270,7 @@ export default function LocalCommandAssistant({ session }) {
       }
       if (data.action === 'batch-upload-and-publish' && Array.isArray(data.items) && data.items.length) {
         setActiveUploads((current) => [...current, ...data.items]);
-        data.items.forEach((item) => pollUploadAndPublish(item.fileCode, item.title));
+        data.items.forEach((item) => pollUploadAndPublish(item.fileCode, item.title, 1, BATCH_UPLOAD_POLL_SCHEDULE));
       }
       if (data.action === 'match-titles-by-size' && data.pendingTitleMatches && Array.isArray(data.matches) && data.matches.length) {
         // Same confirm/cancel box as rename/delete/publish — proposals are

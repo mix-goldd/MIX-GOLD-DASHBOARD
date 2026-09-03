@@ -2314,67 +2314,8 @@
         .image-detail-container.active {
             display: flex;
         }
-        .download-detail {
-            display: none;
-            flex-direction: column;
-            align-items: stretch;
-            max-width: 640px;
-            margin: 0 auto;
-            padding: 0;
-        }
-        .download-detail.active {
-            display: flex;
-        }
-        .download-detail-poster {
-            width: 100%;
-            aspect-ratio: 16 / 9;
-            object-fit: cover;
-        }
-        .download-detail-body {
-            padding: 24px 16px 48px;
-            text-align: center;
-        }
-        .download-detail-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--text-color);
-            margin-bottom: 8px;
-        }
-        .download-detail-meta {
-            font-size: 0.85rem;
-            color: var(--text-color);
-            opacity: 0.65;
-            margin-bottom: 28px;
-        }
-        .download-cta-btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-            max-width: 320px;
-            padding: 14px 20px;
-            background: var(--primary-color);
-            color: #fff;
-            font-size: 1rem;
-            font-weight: 700;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        .download-cta-btn:hover {
-            filter: brightness(1.08);
-        }
-        .action-item[hidden],
-        .download-cta-btn[hidden] {
+        .action-item[hidden] {
             display: none !important;
-        }
-        .download-detail-note {
-            margin-top: 18px;
-            font-size: 0.8rem;
-            color: var(--text-color);
-            opacity: 0.5;
         }
         .pixiv-gallery-wrapper {
             position: relative;
@@ -4388,22 +4329,6 @@
                 <button class="post-not-found-home-btn" type="button" onclick="navigateTo('home')">العودة إلى الصفحة الرئيسية / Back to Home</button>
             </div>
         </section>
-
-        <div id="download-detail" class="download-detail">
-            <div class="pixiv-detail-nav">
-                <div class="pixiv-nav-back" onclick="backToPostFromDownload()"><i class="fas fa-chevron-left"></i></div>
-                <div class="pixiv-nav-title" id="download-detail-nav-title">Download</div>
-            </div>
-            <img class="download-detail-poster" id="download-detail-poster" src="" alt="">
-            <div class="download-detail-body">
-                <div class="download-detail-title" id="download-detail-title"></div>
-                <div class="download-detail-meta" id="download-detail-meta"></div>
-                <a class="download-cta-btn" id="download-detail-cta" href="#" target="_blank" rel="noopener noreferrer">
-                    <i class="fas fa-download"></i> <span id="download-detail-cta-text">Download Now</span>
-                </a>
-                <div class="download-detail-note" id="download-detail-note"></div>
-            </div>
-        </div>
 
         <div id="image-detail-view" class="image-detail-container">
       <div class="pixiv-detail-nav">
@@ -9332,53 +9257,27 @@ function toggleSave(url, cardElement) {
             updateHeaderForPage('post-not-found', '404');
         }
 
-        function showDownloadDetail(videoData, cardElement) {
-            currentPostCard = cardElement;
-            clearPostPlayer();
-            const title = videoData.title || videoData.name || '';
-            document.getElementById('download-detail-poster').src = videoData.url || '';
-            document.getElementById('download-detail-title').textContent = title;
-            document.getElementById('download-detail-nav-title').textContent = title;
-            document.getElementById('download-detail-meta').textContent = videoData.duration ? `Duration: ${videoData.duration}` : '';
-            const cta = document.getElementById('download-detail-cta');
-            const downloadUrl = getSafePlayerUrl(videoData?.downloadUrl || '');
-            const hasDownloadUrl = Boolean(downloadUrl);
-            cta.href = hasDownloadUrl ? downloadUrl : '#';
-            cta.hidden = !hasDownloadUrl;
-            cta.setAttribute('aria-hidden', String(!hasDownloadUrl));
-            document.getElementById('download-detail-note').textContent = hasDownloadUrl
-                ? ''
-                : 'Download link is not available for this post yet.';
-
-            document.querySelectorAll('.container').forEach(c => c.classList.remove('active'));
-            document.getElementById('post-detail').classList.remove('active');
-            document.getElementById('image-detail-view').classList.remove('active');
-            document.getElementById('model-detail').classList.remove('active');
-            const mangaDetailElG = document.getElementById('manga-detail-view'); if (mangaDetailElG) mangaDetailElG.classList.remove('active');
-            const mangaReaderElG = document.getElementById('manga-reader-view'); if (mangaReaderElG) mangaReaderElG.classList.remove('active');
-            document.getElementById('download-detail').classList.add('active');
-            updateHeaderForPage('download-detail', title);
-        }
-
-        // Download button inside a post -> its own subpage (?dl=<slug>).
+        // Download button inside a post -> opens the file link directly in a
+        // new tab (through the same getSafePlayerUrl check used for the
+        // player iframe). Used to navigate to its own subpage (?dl=<slug>);
+        // that page was removed, this just triggers the download in place.
         function openDownloadFromCurrent() {
             if (!currentPostCard) return;
             const videoData = findVideoDataByUrl(currentPostCard.dataset.url);
             if (!videoData) return;
-            showDownloadDetail(videoData, currentPostCard);
-            const slug = slugFromKey(currentPostCard.dataset.postId || currentPostCard.dataset.url);
-            history.pushState({ mixGold: true, view: 'download', slug: slug }, '', directPath('download', slug));
+            const link = getSafePlayerUrl(videoData?.downloadUrl || '') || getSafePlayerUrl(videoData?.pageUrl || '');
+            if (link) window.open(link, '_blank', 'noopener');
         }
 
+        // Old shared/bookmarked /download/<slug> links: open the file the
+        // same way, then land on the post's own page instead of a dead route.
         function openDownloadBySlug(slug) {
             const videoData = findVideoDataBySlug(slug);
             if (!videoData) return false;
-            showDownloadDetail(videoData, createImageCard(videoData));
+            const link = getSafePlayerUrl(videoData?.downloadUrl || '') || getSafePlayerUrl(videoData?.pageUrl || '');
+            if (link) window.open(link, '_blank', 'noopener');
+            showPostDetail(createImageCard(videoData));
             return true;
-        }
-
-        function backToPostFromDownload() {
-            returnToPreviousView('home');
         }
 
         window.addEventListener('popstate', function () {
